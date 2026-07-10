@@ -14,10 +14,11 @@ dashboardRouter.get("/", async (_req, res, next) => {
     const b2gDays = config.B2G_DUE_DATE_THRESHOLD_DAYS;
     const subDays = config.SUBMISSION_DEADLINE_THRESHOLD_DAYS;
 
-    const [events, submissions, leads, opps, byFormat] = await Promise.all([
-      pool.query(
-        `SELECT count(*)::int AS n FROM events WHERE event_date >= current_date`
-      ),
+    const [events, submissions, leads, opps, byFormat, byStatus] =
+      await Promise.all([
+        pool.query(
+          `SELECT count(*)::int AS n FROM events WHERE event_date >= current_date`
+        ),
       pool.query(
         `SELECT count(*)::int AS n FROM submissions
           WHERE submission_date IS NULL
@@ -41,6 +42,16 @@ dashboardRouter.get("/", async (_req, res, next) => {
         `SELECT coalesce(format, 'Unspecified') AS format, count(*)::int AS n
            FROM publicity_contacts GROUP BY format ORDER BY n DESC`
       ),
+      // Leads grouped by the configurable status pipeline (REQ-005/013),
+      // including zero-count stages, in pipeline order.
+      pool.query(
+        `SELECT s.label AS status, count(l.id)::int AS n
+           FROM lead_statuses s
+           LEFT JOIN b2b_leads l ON l.status = s.label
+          WHERE s.is_active = true
+          GROUP BY s.label, s.sort_order
+          ORDER BY s.sort_order`
+      ),
     ]);
 
     res.json({
@@ -49,6 +60,11 @@ dashboardRouter.get("/", async (_req, res, next) => {
       leads_due_for_follow_up: leads.rows[0].n,
       b2g_opportunities_nearing_due_date: opps.rows[0].n,
       publicity_contacts_by_format: byFormat.rows,
+      leads_by_status: byStatus.rows,
+      thresholds: {
+        b2g_due_date_threshold_days: b2gDays,
+        submission_deadline_threshold_days: subDays,
+      },
     });
   } catch (err) {
     next(err);

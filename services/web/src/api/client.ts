@@ -46,6 +46,11 @@ export const api = {
       method: "PUT",
       body: JSON.stringify(body),
     }),
+  patch: <T>(resource: string, id: string, body: unknown) =>
+    request<T>(`/${resource}/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
   remove: (resource: string, id: string) =>
     request<void>(`/${resource}/${id}`, { method: "DELETE" }),
 };

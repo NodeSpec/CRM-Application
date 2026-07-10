@@ -17,6 +17,9 @@ export const submissionCategoriesRouter = makeCrudRouter({
   schema: submissionCategorySchema,
   columns: ["label", "is_active"],
   searchable: ["label"],
+  // submission_categories has no created_by column.
+  trackOwner: false,
   // Category administration is an Admin-only capability (REQ-011 AC1).
+  writeRole: "admin",
   deleteRole: "admin",
 });

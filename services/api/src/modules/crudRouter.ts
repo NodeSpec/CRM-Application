@@ -25,6 +25,11 @@ export interface CrudOptions {
   schema: ZodSchema;
   /** Columns usable as `?<col>=` equality filters and free-text search. */
   searchable?: string[];
+  /** Whether the table has a `created_by` owner column (default true). Set
+   *  false for tables without one (e.g. submission_categories). */
+  trackOwner?: boolean;
+  /** Role required to create/update (defaults to any authenticated user). */
+  writeRole?: Role;
   /** Role required to delete (defaults to any authenticated user). */
   deleteRole?: Role;
 }
@@ -71,10 +76,22 @@ export function makeCrudRouter(opts: CrudOptions): Router {
       const where: string[] = [];
       const params: unknown[] = [];
       for (const col of columns) {
+        // Equality filter: ?<col>=value
         const val = req.query[col];
         if (typeof val === "string" && val !== "") {
           params.push(val);
           where.push(`${col} = $${params.length}`);
+        }
+        // Range filters: ?<col>_from= / ?<col>_to= (dates or comparable values).
+        const from = req.query[`${col}_from`];
+        if (typeof from === "string" && from !== "") {
+          params.push(from);
+          where.push(`${col} >= $${params.length}`);
+        }
+        const to = req.query[`${col}_to`];
+        if (typeof to === "string" && to !== "") {
+          params.push(to);
+          where.push(`${col} <= $${params.length}`);
         }
       }
       const q = req.query.q;
@@ -112,15 +129,19 @@ export function makeCrudRouter(opts: CrudOptions): Router {
     }
   });
 
+  // Optional admin (or other) gate on create/update (REQ-011 categories).
+  const writeGuards = opts.writeRole ? [requireRole(opts.writeRole)] : [];
+
   // CREATE.
-  router.post("/", validateBody(schema), async (req, res, next) => {
+  router.post("/", ...writeGuards, validateBody(schema), async (req, res, next) => {
     try {
       const provided = columns.filter((c) => req.body[c] !== undefined);
-      const cols = [...provided, "created_by"];
-      const values = [
-        ...provided.map((c) => req.body[c]),
-        req.principal?.userId ?? null,
-      ];
+      const cols = [...provided];
+      const values = provided.map((c) => req.body[c]);
+      if (opts.trackOwner !== false) {
+        cols.push("created_by");
+        values.push(req.principal?.userId ?? null);
+      }
       const placeholders = cols.map((_, i) => `$${i + 1}`).join(", ");
       const { rows } = await pool.query(
         `INSERT INTO ${table} (${cols.join(", ")}) VALUES (${placeholders}) RETURNING *`,
@@ -134,7 +155,7 @@ export function makeCrudRouter(opts: CrudOptions): Router {
   });
 
   // UPDATE.
-  router.put("/:id", validateBody(schema), async (req, res, next) => {
+  router.put("/:id", ...writeGuards, validateBody(schema), async (req, res, next) => {
     try {
       const before = (
         await pool.query(`SELECT * FROM ${table} WHERE id = $1`, [
