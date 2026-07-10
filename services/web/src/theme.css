@@ -1,0 +1,93 @@
+/* Design tokens ported from Claude Design "1A — Calm".
+   Light is the default; [data-theme="dark"] on <html> switches to dark. */
+:root {
+  --radius: 16px;
+  --bg: #f4f3f8;
+  --surface: #ffffff;
+  --surface-2: #faf9fc;
+  --surface-3: #f2f1f8;
+  --border: #ecebf2;
+  --border-strong: #e1dfec;
+  --text: #1a1922;
+  --text-2: #6b6979;
+  --text-3: #9c9aab;
+  --accent: #6d5ef0;
+  --accent-strong: color-mix(in srgb, var(--accent), #000 12%);
+  --accent-soft: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  --accent-soft-2: color-mix(in srgb, var(--accent) 6%, var(--surface));
+  --on-accent: #ffffff;
+  --pos: #12a150;
+  --pos-soft: #e7f6ee;
+  --neg: #e5484d;
+  --neg-soft: #fdecec;
+  --warn: #e08600;
+  --warn-soft: #fbf1de;
+  --info: #3b82f6;
+  --shadow: 0 1px 2px rgba(24, 23, 34, 0.05), 0 14px 30px -18px rgba(24, 23, 34, 0.18);
+  --shadow-sm: 0 1px 2px rgba(24, 23, 34, 0.06);
+}
+
+:root[data-theme="dark"] {
+  --bg: #0e0e13;
+  --surface: #16161f;
+  --surface-2: #1b1b26;
+  --surface-3: #20202c;
+  --border: #262633;
+  --border-strong: #32323f;
+  --text: #f3f3f7;
+  --text-2: #a2a1b2;
+  --text-3: #6e6d7e;
+  --accent: #8a7bfb;
+  --accent-strong: color-mix(in srgb, var(--accent), #fff 14%);
+  --accent-soft: color-mix(in srgb, var(--accent) 16%, var(--surface));
+  --accent-soft-2: color-mix(in srgb, var(--accent) 9%, var(--surface));
+  --on-accent: #ffffff;
+  --pos: #3dd68c;
+  --pos-soft: #12281f;
+  --neg: #ff6369;
+  --neg-soft: #2a1618;
+  --warn: #f7c164;
+  --warn-soft: #2a2113;
+  --info: #6aa1ff;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 14px 30px -18px rgba(0, 0, 0, 0.6);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+body {
+  font-family: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background: var(--bg);
+  color: var(--text);
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  color: var(--accent-strong);
+}
+
+.material-symbols-rounded {
+  font-family: "Material Symbols Rounded";
+  font-weight: 400;
+  font-style: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-variation-settings: "FILL" 0, "wght" 500, "GRAD" 0, "opsz" 24;
+}
+.tnum {
+  font-variant-numeric: tabular-nums;
+}

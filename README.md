@@ -76,12 +76,12 @@ Any step above that mentions an admin console, a certificate, or "your developer
 # Developer quick start
 
 > This section is for developers. The application is generated from the
-> component specs in `.nodespec/` and `ARCHITECTURE.md`. It is now **minimally
-> functional**: you can deploy it, log in via Keycloak, and browse/create
-> records. Login (backend-for-frontend OIDC), server-side sessions, RBAC,
-> database migrations, DB-backed CRUD for all five modules, the dashboard, and
-> audit logging are implemented. Remaining polish (advanced filtering, CSV
-> export, calendar view, admin panels) is still to be built.
+> component specs in `.nodespec/` and `ARCHITECTURE.md`. It is **functional**:
+> deploy it, log in via Keycloak, and use it. Implemented: backend-for-frontend
+> OIDC login, server-side sessions, RBAC, database migrations, DB-backed CRUD
+> for all five modules, a redesigned dashboard with light/dark theme, advanced
+> per-module filtering + CSV export, B2G/submission due-date badges, an events
+> calendar view, and admin panels (submission categories, user roles, audit log).
 
 ## Run the whole stack
 

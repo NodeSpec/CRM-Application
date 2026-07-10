@@ -9,6 +9,8 @@ import { submissionCategoriesRouter } from "../modules/submission-categories/ind
 import { publicityContactsRouter } from "../modules/publicity-contacts/index.js";
 import { dashboardRouter } from "../modules/dashboard/index.js";
 import { auditRouter } from "../modules/audit/index.js";
+import { metaRouter } from "../modules/meta/index.js";
+import { usersRouter } from "../modules/users/index.js";
 
 /**
  * Versioned API surface (REQ-016). Every CRM module hangs off `/api/v1`.
@@ -34,3 +36,5 @@ v1Router.use("/submission-categories", submissionCategoriesRouter);
 v1Router.use("/publicity-contacts", publicityContactsRouter);
 v1Router.use("/dashboard", dashboardRouter);
 v1Router.use("/audit", auditRouter);
+v1Router.use("/meta", metaRouter);
+v1Router.use("/users", usersRouter);
