@@ -1,0 +1,28 @@
+# Secrets / environment — never commit real values (REQ-015)
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Test / coverage
+coverage/
+.vitest/
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.log
+
+# TLS material (mounted at runtime, never baked in)
+services/proxy/certs/*.pem

@@ -1,0 +1,156 @@
+# =============================================================================
+# CRM Platform — single-host deployment topology (REQ-014, REQ-015)
+# =============================================================================
+# `docker compose up` starts the full stack. The only prerequisite is a filled
+# `.env` file (copy from `.env.example`). All configuration is injected via env;
+# nothing environment-specific is hardcoded here. Every image is pinned to an
+# explicit semantic-version tag — no `:latest`. Only the reverse proxy publishes
+# host ports; every other service is reachable solely on the internal network.
+# =============================================================================
+
+name: crm
+
+services:
+  # --- Reverse Proxy: the single external entry point (nginx) ---------------
+  reverse-proxy:
+    build:
+      context: ./services/proxy
+    image: crm/reverse-proxy:0.1.0
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      web:
+        condition: service_started
+      api:
+        condition: service_healthy
+      idp:
+        condition: service_started
+    networks:
+      - crm-net
+    # TLS certs, when used in production, are mounted read-only here:
+    # volumes:
+    #   - ./services/proxy/certs:/etc/nginx/certs:ro
+
+  # --- CRM Web App: static React bundle served by a tiny nginx --------------
+  web:
+    build:
+      context: ./services/web
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+        VITE_OIDC_AUTHORITY: ${VITE_OIDC_AUTHORITY}
+        VITE_OIDC_CLIENT_ID: ${VITE_OIDC_CLIENT_ID}
+    image: crm/web:0.1.0
+    restart: unless-stopped
+    networks:
+      - crm-net
+
+  # --- CRM API: Node/Express backend (internal only) -----------------------
+  api:
+    build:
+      context: ./services/api
+    image: crm/api:0.1.0
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # Migrations are owned by the CRM Database task and mounted read-only.
+      MIGRATIONS_DIR: /app/db/migrations
+    volumes:
+      - ./db/migrations:/app/db/migrations:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      session-store:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - "CMD"
+        - "node"
+        - "-e"
+        - "fetch('http://localhost:'+(process.env.PORT||3000)+'/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    networks:
+      - crm-net
+
+  # --- Identity Provider: Keycloak (internal, reached via /auth) -----------
+  idp:
+    image: quay.io/keycloak/keycloak:24.0
+    restart: unless-stopped
+    command:
+      - "start-dev"
+      - "--import-realm"
+      - "--http-relative-path=/auth"
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://db:5432/keycloak
+      KC_DB_USERNAME: ${POSTGRES_USER}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KC_HEALTH_ENABLED: "true"
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY_HEADERS: "xforwarded"
+    volumes:
+      - ./infra/keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+      - keycloak_data:/opt/keycloak/data
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - crm-net
+
+  # --- CRM Database: PostgreSQL (internal only) ----------------------------
+  db:
+    image: postgres:16.4-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Bootstrap the separate `keycloak` database on first init.
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - crm-net
+
+  # --- Session Store: Redis (internal only) --------------------------------
+  session-store:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    command:
+      - "redis-server"
+      - "/usr/local/etc/redis/redis.conf"
+      - "--requirepass"
+      - "${REDIS_PASSWORD}"
+    volumes:
+      - ./infra/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$REDIS_PASSWORD\" ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - crm-net
+
+networks:
+  crm-net:
+    driver: bridge
+
+volumes:
+  pgdata:
+  redisdata:
+  keycloak_data:

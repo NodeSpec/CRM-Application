@@ -70,3 +70,67 @@ Once all of the above is in place and the developers have built the application 
 ## Questions or stuck partway through?
 
 Any step above that mentions an admin console, a certificate, or "your developer" is a good moment to loop in whoever manages your technical infrastructure — these aren't steps an AI assistant can complete on your behalf, since they involve decisions specific to your organization (domain names, company logins, security certificates, etc).
+
+---
+
+# Developer quick start
+
+> This section is for developers. The application is generated from the
+> component specs in `.nodespec/` and `ARCHITECTURE.md`. It is currently a
+> **config/scaffold**: the full stack builds, boots, and routes end-to-end, and
+> the integration spine (env config, migrations, sessions, RBAC, OpenAPI,
+> reverse proxy) is complete. Each module's CRUD business logic is left as a
+> clearly marked `TODO`/`501` stub to fill in.
+
+## Run the whole stack
+
+```bash
+cp .env.example .env      # fill in real secrets before anything public
+docker compose up --build
+```
+
+Then open <http://localhost>. Only the reverse proxy is exposed on the host
+(ports 80/443); the API, database, Redis and Keycloak stay on the internal
+compose network. The API runs database migrations automatically on startup
+before it accepts traffic.
+
+Useful endpoints (through the proxy):
+
+| URL | What |
+|---|---|
+| `http://localhost/` | React SPA |
+| `http://localhost/api/v1/...` | Versioned REST API (module CRUD) |
+| `http://localhost/api/docs` | OpenAPI 3.x docs (Swagger UI) |
+| `http://localhost/healthz` | API health probe |
+| `http://localhost/auth/realms/crm/...` | Keycloak (Identity Provider) |
+
+## Layout
+
+```
+docker-compose.yml       # single-host deployment topology (all six services)
+.env.example             # every supported variable, documented
+db/migrations/           # numbered up/down SQL, applied by the API on startup
+db/init/                 # first-boot Postgres init (Keycloak database)
+services/api/            # CRM API — Node/Express/TypeScript
+services/web/            # CRM Web App — React/Vite/TypeScript
+services/proxy/          # Reverse proxy — nginx.conf + Dockerfile
+infra/redis/redis.conf   # Session store config
+infra/keycloak/          # Keycloak realm export (realm, clients, roles)
+```
+
+## Configuration
+
+Everything environment-specific is injected via `.env` (or mounted config
+files) — no secrets are baked into images. The API validates required
+variables at startup and **fails fast** with a descriptive error if any are
+missing. See `.env.example` for the full list.
+
+## Requirement coverage
+
+Each generated artifact maps back to the requirements in the `.nodespec` task
+documents (REQ-001 … REQ-018): pluggable OIDC/SAML identity (Keycloak realm +
+API verification seam), RBAC (roles/groups + `requireRole` middleware), secure
+sessions (Redis + HttpOnly/Secure/SameSite cookies), the five CRM modules,
+audit logging (append-only, DB-enforced immutability), API-first design
+(`/api/v1` + `/api/docs`), env-based config, versioned migrations, and
+container-based deployment.
