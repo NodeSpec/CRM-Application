@@ -1,27 +1,56 @@
 import { Router } from "express";
+import { pool } from "../../db/pool.js";
+import { config } from "../../config.js";
 
 /**
- * Unified dashboard aggregation (REQ-013). Surfaces cross-module summaries:
- * upcoming events, approaching submission deadlines, leads due for follow-up,
- * B2G opportunities nearing due date, and publicity contacts by format.
- *
- * NOTE (scaffold): returns a stubbed shape describing the widgets. Implement
- * each field with an aggregation query against the CRM Database.
+ * Unified dashboard aggregation (REQ-013). Returns cross-module summary counts
+ * plus the publicity-by-format breakdown, driven by the configurable alert
+ * thresholds (REQ-008, REQ-010, REQ-015).
  */
 export const dashboardRouter = Router();
 
-dashboardRouter.get("/", (_req, res) => {
-  // TODO(scaffold): replace with real aggregation queries (REQ-013).
-  res.status(501).json({
-    error: "Not implemented",
-    module: "dashboard",
-    widgets: [
-      "upcoming_events",
-      "approaching_submission_deadlines",
-      "leads_due_for_follow_up",
-      "b2g_opportunities_nearing_due_date",
-      "publicity_contacts_by_format",
-    ],
-    hint: "Scaffold stub — aggregation logic to be implemented.",
-  });
+dashboardRouter.get("/", async (_req, res, next) => {
+  try {
+    const b2gDays = config.B2G_DUE_DATE_THRESHOLD_DAYS;
+    const subDays = config.SUBMISSION_DEADLINE_THRESHOLD_DAYS;
+
+    const [events, submissions, leads, opps, byFormat] = await Promise.all([
+      pool.query(
+        `SELECT count(*)::int AS n FROM events WHERE event_date >= current_date`
+      ),
+      pool.query(
+        `SELECT count(*)::int AS n FROM submissions
+          WHERE submission_date IS NULL
+            AND deadline <= current_date + make_interval(days => $1)`,
+        [subDays]
+      ),
+      pool.query(
+        `SELECT count(*)::int AS n FROM b2b_leads
+          WHERE reminder_date IS NOT NULL
+            AND reminder_date <= current_date
+            AND status NOT IN ('Closed-Won', 'Closed-Lost')`
+      ),
+      pool.query(
+        `SELECT count(*)::int AS n FROM b2g_opportunities
+          WHERE due_date IS NOT NULL
+            AND due_date <= current_date + make_interval(days => $1)
+            AND status NOT ILIKE 'closed%'`,
+        [b2gDays]
+      ),
+      pool.query(
+        `SELECT coalesce(format, 'Unspecified') AS format, count(*)::int AS n
+           FROM publicity_contacts GROUP BY format ORDER BY n DESC`
+      ),
+    ]);
+
+    res.json({
+      upcoming_events: events.rows[0].n,
+      approaching_submission_deadlines: submissions.rows[0].n,
+      leads_due_for_follow_up: leads.rows[0].n,
+      b2g_opportunities_nearing_due_date: opps.rows[0].n,
+      publicity_contacts_by_format: byFormat.rows,
+    });
+  } catch (err) {
+    next(err);
+  }
 });

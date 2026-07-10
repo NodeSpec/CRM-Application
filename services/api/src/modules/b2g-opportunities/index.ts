@@ -29,5 +29,22 @@ export const b2gOpportunitySchema = z
 
 export const b2gOpportunitiesRouter = makeCrudRouter({
   module: "b2g_opportunities",
+  table: "b2g_opportunities",
   schema: b2gOpportunitySchema,
+  columns: [
+    "notice_id",
+    "agency_department",
+    "opportunity_link",
+    "due_date",
+    "focus_area_rr_role",
+    "fit_score_numeric",
+    "fit_score_tier",
+    "possible_partner_company",
+    "partner_poc",
+    "contact_email",
+    "status",
+    "action_officer",
+    "notes",
+  ],
+  searchable: ["notice_id", "agency_department", "focus_area_rr_role"],
 });

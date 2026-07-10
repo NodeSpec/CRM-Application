@@ -1,23 +1,22 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
 
 /**
- * Authentication context (REQ-001, REQ-002). Performs the OIDC login redirect
- * against the pluggable IdP (served at /auth via the reverse proxy) and exposes
- * the current user + role so the UI can hide admin-only functions for Members.
- *
- * NOTE (scaffold): `login` builds and navigates to the OIDC authorize URL — the
- * real seam. Completing the authorization-code callback + session exchange with
- * the API is left as a TODO for the chosen scaffold scope; `user` starts null.
+ * Authentication context (REQ-001, REQ-002). Login is backend-driven (BFF):
+ * the SPA navigates to the API's /auth/login, which redirects to the IdP; after
+ * the callback the API sets a session cookie and the SPA reads the current user
+ * from /auth/me. Role is exposed so the UI hides admin-only functions (REQ-002).
  */
 export type Role = "admin" | "member";
 
 export interface User {
+  userId: string;
   email: string;
   displayName: string;
   role: Role;
@@ -25,40 +24,55 @@ export interface User {
 
 interface AuthState {
   user: User | null;
+  loading: boolean;
   isAdmin: boolean;
   login: () => void;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
-
-const AUTHORITY = import.meta.env.VITE_OIDC_AUTHORITY || "/auth/realms/crm";
-const CLIENT_ID = import.meta.env.VITE_OIDC_CLIENT_ID || "crm-web";
+const BASE = import.meta.env.VITE_API_BASE_URL || "/api/v1";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    fetch(`${BASE}/auth/me`, { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (active) setUser(data?.user ?? null);
+      })
+      .catch(() => active && setUser(null))
+      .finally(() => active && setLoading(false));
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const value = useMemo<AuthState>(
     () => ({
       user,
+      loading,
       isAdmin: user?.role === "admin",
       login: () => {
-        // Redirect to the IdP's OIDC authorization endpoint (REQ-001 seam).
-        const redirectUri = `${window.location.origin}/callback`;
-        const url =
-          `${AUTHORITY}/protocol/openid-connect/auth` +
-          `?client_id=${encodeURIComponent(CLIENT_ID)}` +
-          `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-          `&response_type=code&scope=openid%20profile%20email`;
-        window.location.assign(url);
+        // Full-page navigation to the backend login route (starts OIDC).
+        window.location.assign(`${BASE}/auth/login`);
       },
-      logout: () => {
-        setUser(null);
-        // TODO(scaffold): call the API logout endpoint to invalidate the
-        // server-side session (REQ-003), then redirect to the IdP logout.
+      logout: async () => {
+        try {
+          await fetch(`${BASE}/auth/logout`, {
+            method: "POST",
+            credentials: "include",
+          });
+        } finally {
+          setUser(null);
+          window.location.assign("/");
+        }
       },
     }),
-    [user]
+    [user, loading]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

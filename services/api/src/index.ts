@@ -16,7 +16,10 @@ import { errorHandler, notFound } from "./middleware/error.js";
 async function main() {
   const app = express();
 
-  app.use(helmet());
+  // CSP is disabled so the Swagger UI at /api/docs renders its inline assets;
+  // the SPA is served by a separate nginx, so this only affects API responses.
+  // Re-enable a tailored CSP in production if docs are gated or moved.
+  app.use(helmet({ contentSecurityPolicy: false }));
   app.use(express.json({ limit: "1mb" }));
   app.use(cookieParser());
 

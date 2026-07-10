@@ -13,5 +13,8 @@ export const eventSchema = z.object({
 
 export const eventsRouter = makeCrudRouter({
   module: "events",
+  table: "events",
   schema: eventSchema,
+  columns: ["event_name", "event_date", "location", "website_url"],
+  searchable: ["event_name", "location"],
 });

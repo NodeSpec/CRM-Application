@@ -36,6 +36,8 @@ export const api = {
     const qs = params ? `?${new URLSearchParams(params)}` : "";
     return request<T[]>(`/${resource}${qs}`);
   },
+  /** GET a resource that returns a single object (e.g. the dashboard summary). */
+  object: <T>(resource: string) => request<T>(`/${resource}`),
   get: <T>(resource: string, id: string) => request<T>(`/${resource}/${id}`),
   create: <T>(resource: string, body: unknown) =>
     request<T>(`/${resource}`, { method: "POST", body: JSON.stringify(body) }),
