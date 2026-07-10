@@ -1,0 +1,251 @@
+openapi: 3.0.3
+info:
+  title: CRM Platform API
+  version: "1.0.0"
+  description: >
+    Versioned REST API serving all five CRM modules (B2B leads, B2G
+    opportunities, events, submissions, publicity contacts) plus dashboard and
+    audit endpoints (REQ-016). All routes require an authenticated session
+    (HttpOnly cookie); Admin-only routes additionally require the admin role.
+servers:
+  - url: /api/v1
+    description: Version 1 (served through the reverse proxy)
+
+tags:
+  - name: B2B Leads
+  - name: B2G Opportunities
+  - name: Events
+  - name: Submissions
+  - name: Submission Categories
+  - name: Publicity Contacts
+  - name: Dashboard
+  - name: Audit
+
+paths:
+  /b2b-leads:
+    get:
+      tags: [B2B Leads]
+      summary: List B2B leads (supports search/filter/sort — REQ-006)
+      responses:
+        "200": { description: List of leads }
+    post:
+      tags: [B2B Leads]
+      summary: Create a B2B lead (REQ-004)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/B2BLead" }
+      responses:
+        "201": { description: Created }
+        "400": { description: Validation error }
+  /b2b-leads/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      tags: [B2B Leads]
+      summary: Get a B2B lead
+      responses:
+        "200": { description: Lead }
+        "404": { description: Not found }
+    put:
+      tags: [B2B Leads]
+      summary: Update a B2B lead
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/B2BLead" }
+      responses:
+        "200": { description: Updated }
+    delete:
+      tags: [B2B Leads]
+      summary: Delete a B2B lead (confirmation enforced client-side — REQ-004)
+      responses:
+        "204": { description: Deleted }
+
+  /b2g-opportunities:
+    get:
+      tags: [B2G Opportunities]
+      summary: List B2G opportunities (filter by status/agency/focus/fit/due — REQ-008)
+      responses:
+        "200": { description: List of opportunities }
+    post:
+      tags: [B2G Opportunities]
+      summary: Create a B2G opportunity (unique Notice ID — REQ-007)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/B2GOpportunity" }
+      responses:
+        "201": { description: Created }
+        "409": { description: Duplicate Notice ID }
+  /b2g-opportunities/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get: { tags: [B2G Opportunities], summary: Get opportunity, responses: { "200": { description: Opportunity } } }
+    put: { tags: [B2G Opportunities], summary: Update opportunity, responses: { "200": { description: Updated } } }
+    delete: { tags: [B2G Opportunities], summary: Delete opportunity, responses: { "204": { description: Deleted } } }
+
+  /events:
+    get: { tags: [Events], summary: List events (sortable by date — REQ-009), responses: { "200": { description: List } } }
+    post:
+      tags: [Events]
+      summary: Create an event (REQ-009)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Event" }
+      responses: { "201": { description: Created } }
+  /events/{id}:
+    parameters: [ { $ref: "#/components/parameters/Id" } ]
+    get: { tags: [Events], summary: Get event, responses: { "200": { description: Event } } }
+    put: { tags: [Events], summary: Update event, responses: { "200": { description: Updated } } }
+    delete: { tags: [Events], summary: Delete event, responses: { "204": { description: Deleted } } }
+
+  /submissions:
+    get: { tags: [Submissions], summary: List submissions (deadline flags — REQ-010), responses: { "200": { description: List } } }
+    post:
+      tags: [Submissions]
+      summary: Create a submission (REQ-010)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Submission" }
+      responses: { "201": { description: Created } }
+  /submissions/{id}:
+    parameters: [ { $ref: "#/components/parameters/Id" } ]
+    get: { tags: [Submissions], summary: Get submission, responses: { "200": { description: Submission } } }
+    put: { tags: [Submissions], summary: Update submission, responses: { "200": { description: Updated } } }
+    delete: { tags: [Submissions], summary: Delete submission, responses: { "204": { description: Deleted } } }
+
+  /submission-categories:
+    get: { tags: [Submission Categories], summary: List categories (REQ-011), responses: { "200": { description: List } } }
+    post:
+      tags: [Submission Categories]
+      summary: Create category (Admin only — REQ-011)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SubmissionCategory" }
+      responses: { "201": { description: Created }, "403": { description: Admin required } }
+  /submission-categories/{id}:
+    parameters: [ { $ref: "#/components/parameters/Id" } ]
+    put: { tags: [Submission Categories], summary: Rename/deactivate category (Admin), responses: { "200": { description: Updated } } }
+    delete: { tags: [Submission Categories], summary: Delete category (Admin), responses: { "204": { description: Deleted } } }
+
+  /publicity-contacts:
+    get: { tags: [Publicity Contacts], summary: List/search publicity contacts (REQ-012), responses: { "200": { description: List } } }
+    post:
+      tags: [Publicity Contacts]
+      summary: Create a publicity contact (REQ-012)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PublicityContact" }
+      responses: { "201": { description: Created } }
+  /publicity-contacts/{id}:
+    parameters: [ { $ref: "#/components/parameters/Id" } ]
+    get: { tags: [Publicity Contacts], summary: Get contact, responses: { "200": { description: Contact } } }
+    put: { tags: [Publicity Contacts], summary: Update contact, responses: { "200": { description: Updated } } }
+    delete: { tags: [Publicity Contacts], summary: Delete contact, responses: { "204": { description: Deleted } } }
+
+  /dashboard:
+    get:
+      tags: [Dashboard]
+      summary: Cross-module summary widgets (REQ-013)
+      responses:
+        "200": { description: Dashboard summary }
+
+  /audit:
+    get:
+      tags: [Audit]
+      summary: Query the immutable audit log (Admin only — REQ-018)
+      parameters:
+        - { name: module, in: query, schema: { type: string } }
+        - { name: actor, in: query, schema: { type: string } }
+        - { name: action, in: query, schema: { type: string, enum: [create, update, delete] } }
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+      responses:
+        "200": { description: Audit entries }
+        "403": { description: Admin required }
+
+components:
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  schemas:
+    B2BLead:
+      type: object
+      required: [company_name]
+      properties:
+        company_name: { type: string }
+        industry_vertical: { type: string }
+        primary_poc: { type: string }
+        title_role: { type: string }
+        contact_email: { type: string, format: email }
+        lead_source: { type: string }
+        status: { type: string, default: New }
+        pain_point_use_case: { type: string }
+        initial_contact_date: { type: string, format: date }
+        next_follow_up_date: { type: string, format: date }
+        reminder_date: { type: string, format: date }
+        notes: { type: string }
+    B2GOpportunity:
+      type: object
+      required: [notice_id]
+      properties:
+        notice_id: { type: string }
+        agency_department: { type: string }
+        opportunity_link: { type: string, format: uri }
+        due_date: { type: string, format: date }
+        focus_area_rr_role: { type: string }
+        fit_score_numeric: { type: integer, minimum: 1, maximum: 10 }
+        fit_score_tier: { type: string }
+        possible_partner_company: { type: string }
+        partner_poc: { type: string }
+        contact_email: { type: string, format: email }
+        status: { type: string, default: Open }
+        action_officer: { type: string }
+        notes: { type: string }
+    Event:
+      type: object
+      required: [event_name, event_date, location]
+      properties:
+        event_name: { type: string }
+        event_date: { type: string, format: date }
+        location: { type: string }
+        website_url: { type: string, format: uri }
+    Submission:
+      type: object
+      required: [name, category_id, deadline]
+      properties:
+        name: { type: string }
+        category_id: { type: string, format: uuid }
+        deadline: { type: string, format: date }
+        submission_date: { type: string, format: date }
+        website_url: { type: string, format: uri }
+    SubmissionCategory:
+      type: object
+      required: [label]
+      properties:
+        label: { type: string }
+        is_active: { type: boolean, default: true }
+    PublicityContact:
+      type: object
+      required: [organization, email]
+      properties:
+        organization: { type: string }
+        format: { type: string }
+        contact_name: { type: string }
+        email: { type: string, format: email }
+        notes: { type: string }

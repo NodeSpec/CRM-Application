@@ -1,0 +1,73 @@
+{
+  "realm": "crm",
+  "enabled": true,
+  "displayName": "CRM Platform",
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "roles": {
+    "realm": [
+      { "name": "admin", "description": "Full read/write/delete + user management (REQ-002)" },
+      { "name": "member", "description": "Read/write within assigned modules, no user management (REQ-002)" }
+    ]
+  },
+  "groups": [
+    {
+      "name": "Admins",
+      "path": "/Admins",
+      "realmRoles": ["admin"]
+    },
+    {
+      "name": "Members",
+      "path": "/Members",
+      "realmRoles": ["member"]
+    }
+  ],
+  "defaultGroups": ["/Members"],
+  "clients": [
+    {
+      "clientId": "crm-web",
+      "name": "CRM Web App (SPA)",
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": [
+        "http://localhost/*",
+        "https://localhost/*"
+      ],
+      "webOrigins": [
+        "http://localhost",
+        "https://localhost",
+        "+"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+      "protocolMappers": [
+        {
+          "name": "groups",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-group-membership-mapper",
+          "consentRequired": false,
+          "config": {
+            "full.path": "false",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "claim.name": "groups"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "crm-api",
+      "name": "CRM API (backend)",
+      "protocol": "openid-connect",
+      "bearerOnly": true,
+      "publicClient": false,
+      "standardFlowEnabled": false,
+      "serviceAccountsEnabled": false
+    }
+  ]
+}
