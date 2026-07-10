@@ -6,11 +6,7 @@ WORKDIR /app
 
 # Build-time public config baked into the bundle (Vite inlines VITE_* vars).
 ARG VITE_API_BASE_URL=/api/v1
-ARG VITE_OIDC_AUTHORITY=/auth/realms/crm
-ARG VITE_OIDC_CLIENT_ID=crm-web
-ENV VITE_API_BASE_URL=$VITE_API_BASE_URL \
-    VITE_OIDC_AUTHORITY=$VITE_OIDC_AUTHORITY \
-    VITE_OIDC_CLIENT_ID=$VITE_OIDC_CLIENT_ID
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
 COPY package.json package-lock.json* ./
 RUN npm install

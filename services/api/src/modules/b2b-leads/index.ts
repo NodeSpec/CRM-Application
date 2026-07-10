@@ -23,5 +23,21 @@ export const b2bLeadSchema = z.object({
 
 export const b2bLeadsRouter = makeCrudRouter({
   module: "b2b_leads",
+  table: "b2b_leads",
   schema: b2bLeadSchema,
+  columns: [
+    "company_name",
+    "industry_vertical",
+    "primary_poc",
+    "title_role",
+    "contact_email",
+    "lead_source",
+    "status",
+    "pain_point_use_case",
+    "initial_contact_date",
+    "next_follow_up_date",
+    "reminder_date",
+    "notes",
+  ],
+  searchable: ["company_name", "primary_poc", "notes"],
 });

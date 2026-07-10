@@ -13,7 +13,10 @@ export const submissionCategorySchema = z.object({
 
 export const submissionCategoriesRouter = makeCrudRouter({
   module: "submission_categories",
+  table: "submission_categories",
   schema: submissionCategorySchema,
+  columns: ["label", "is_active"],
+  searchable: ["label"],
   // Category administration is an Admin-only capability (REQ-011 AC1).
   deleteRole: "admin",
 });

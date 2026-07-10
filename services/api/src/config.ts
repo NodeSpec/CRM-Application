@@ -32,8 +32,16 @@ const EnvSchema = z.object({
     .transform((v) => v === "true")
     .default("false"),
 
+  // Public base URL the browser uses to reach the app (through the proxy).
+  // Used to build OIDC redirect URIs and the post-login redirect.
+  APP_BASE_URL: z.string().min(1).default("http://localhost"),
+
   // Identity Provider / OIDC (REQ-001).
+  // Browser-facing issuer/authorize base (reachable from the user's browser).
   OIDC_ISSUER_URL: z.string().min(1, "OIDC_ISSUER_URL is required"),
+  // Server-to-server base for token exchange + JWKS (reachable from the API
+  // container). Defaults to the browser-facing issuer when not split.
+  OIDC_INTERNAL_URL: z.string().optional().default(""),
   OIDC_CLIENT_ID: z.string().min(1, "OIDC_CLIENT_ID is required"),
   OIDC_CLIENT_SECRET: z.string().optional().default(""),
   SAML_METADATA_URL: z.string().optional().default(""),
@@ -71,6 +79,8 @@ function loadConfig(): AppConfig {
   const env = parsed.data;
   return {
     ...env,
+    // Fall back to the browser-facing issuer for backchannel calls if unset.
+    OIDC_INTERNAL_URL: env.OIDC_INTERNAL_URL || env.OIDC_ISSUER_URL,
     isProduction: env.NODE_ENV === "production",
     featureFlags: env.FEATURE_FLAGS.split(",")
       .map((f) => f.trim())

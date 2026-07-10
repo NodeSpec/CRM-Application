@@ -15,5 +15,8 @@ export const publicityContactSchema = z.object({
 
 export const publicityContactsRouter = makeCrudRouter({
   module: "publicity_contacts",
+  table: "publicity_contacts",
   schema: publicityContactSchema,
+  columns: ["organization", "format", "contact_name", "email", "notes"],
+  searchable: ["organization", "contact_name", "format"],
 });

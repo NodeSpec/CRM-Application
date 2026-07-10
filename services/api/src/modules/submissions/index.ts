@@ -15,5 +15,14 @@ export const submissionSchema = z.object({
 
 export const submissionsRouter = makeCrudRouter({
   module: "submissions",
+  table: "submissions",
   schema: submissionSchema,
+  columns: [
+    "name",
+    "category_id",
+    "deadline",
+    "submission_date",
+    "website_url",
+  ],
+  searchable: ["name"],
 });

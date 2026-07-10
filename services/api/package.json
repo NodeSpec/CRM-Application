@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && cp src/openapi.yaml dist/openapi.yaml",
     "start": "node dist/index.js",
     "migrate": "tsx src/db/migrate.ts",
     "test": "vitest run",

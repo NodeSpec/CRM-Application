@@ -76,23 +76,41 @@ Any step above that mentions an admin console, a certificate, or "your developer
 # Developer quick start
 
 > This section is for developers. The application is generated from the
-> component specs in `.nodespec/` and `ARCHITECTURE.md`. It is currently a
-> **config/scaffold**: the full stack builds, boots, and routes end-to-end, and
-> the integration spine (env config, migrations, sessions, RBAC, OpenAPI,
-> reverse proxy) is complete. Each module's CRUD business logic is left as a
-> clearly marked `TODO`/`501` stub to fill in.
+> component specs in `.nodespec/` and `ARCHITECTURE.md`. It is now **minimally
+> functional**: you can deploy it, log in via Keycloak, and browse/create
+> records. Login (backend-for-frontend OIDC), server-side sessions, RBAC,
+> database migrations, DB-backed CRUD for all five modules, the dashboard, and
+> audit logging are implemented. Remaining polish (advanced filtering, CSV
+> export, calendar view, admin panels) is still to be built.
 
 ## Run the whole stack
 
 ```bash
-cp .env.example .env      # fill in real secrets before anything public
+cp .env.example .env      # defaults work out-of-the-box for local; change secrets for anything public
 docker compose up --build
 ```
 
 Then open <http://localhost>. Only the reverse proxy is exposed on the host
 (ports 80/443); the API, database, Redis and Keycloak stay on the internal
 compose network. The API runs database migrations automatically on startup
-before it accepts traffic.
+before it accepts traffic (including sample demo data so the views are
+populated on first run).
+
+## Log in and try it
+
+Click **Log in** — you'll be redirected to Keycloak. Two demo users are seeded
+by the realm import:
+
+| User | Username | Password | Role |
+|---|---|---|---|
+| Admin | `admin` | `admin` | Admin (sees the Admin nav item) |
+| Member | `member` | `member` | Member |
+
+After logging in you land on the **Dashboard** (live cross-module counts). Open
+any module (e.g. **B2B Leads**) to see seeded records, and use the **Add new**
+form to create one and watch it appear. These are development credentials —
+change them (and the `crm-api` client secret in the realm export) before any
+real deployment.
 
 Useful endpoints (through the proxy):
 

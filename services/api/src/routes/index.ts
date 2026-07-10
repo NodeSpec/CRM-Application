@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authenticate } from "../middleware/authenticate.js";
+import { authRouter } from "../modules/auth/index.js";
 import { b2bLeadsRouter } from "../modules/b2b-leads/index.js";
 import { b2gOpportunitiesRouter } from "../modules/b2g-opportunities/index.js";
 import { eventsRouter } from "../modules/events/index.js";
@@ -19,7 +20,10 @@ import { auditRouter } from "../modules/audit/index.js";
  */
 export const v1Router = Router();
 
-// Every /api/v1 route is authenticated (REQ-002/REQ-003).
+// Auth endpoints are public (login/callback/logout); /me guards itself.
+v1Router.use("/auth", authRouter);
+
+// Every other /api/v1 route requires an authenticated session (REQ-002/003).
 v1Router.use(authenticate);
 
 v1Router.use("/b2b-leads", b2bLeadsRouter);
