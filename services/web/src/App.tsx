@@ -5,6 +5,7 @@ import { Dashboard } from "./pages/Dashboard";
 import { AdminPage } from "./pages/AdminPage";
 import { ResourcePage } from "./pages/ResourcePage";
 import { EventsPage } from "./pages/EventsPage";
+import { ContactsPage } from "./pages/ContactsPage";
 import { DealsKanban } from "./pages/DealsKanban";
 import { Company360 } from "./pages/Company360";
 import { ContactDetail } from "./pages/ContactDetail";
@@ -62,17 +63,19 @@ export default function App() {
         <div className="content">
           <Routes>
             <Route path="/" element={<Dashboard />} />
-            {Object.values(MODULES).map((cfg) =>
-              cfg.resource === "events" ? (
-                <Route key="events" path="/events" element={<EventsPage />} />
-              ) : (
-                <Route
-                  key={cfg.resource}
-                  path={`/${cfg.resource}`}
-                  element={<ResourcePage config={cfg} />}
-                />
-              )
-            )}
+            {Object.values(MODULES).map((cfg) => {
+              const el =
+                cfg.resource === "events" ? (
+                  <EventsPage />
+                ) : cfg.resource === "contacts" ? (
+                  <ContactsPage />
+                ) : (
+                  <ResourcePage config={cfg} />
+                );
+              return (
+                <Route key={cfg.resource} path={`/${cfg.resource}`} element={el} />
+              );
+            })}
             <Route path="/deals" element={<DealsKanban />} />
             <Route path="/companies/:id" element={<Company360 />} />
             <Route path="/contacts/:id" element={<ContactDetail />} />

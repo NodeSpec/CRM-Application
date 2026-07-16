@@ -1044,6 +1044,176 @@ tbody tr:hover {
   background: var(--surface-2);
 }
 
+/* ---- Rich contacts table + customize drawer (2A) ----------------------- */
+.with-drawer {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+.with-drawer > .grow {
+  flex: 1;
+  min-width: 0;
+}
+.cg-head,
+.cg-row {
+  display: grid;
+  grid-template-columns: 2fr 1.3fr 150px 160px;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.cg-head span {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.cg-row:hover {
+  background: var(--surface-2);
+}
+.cg-name {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.avatar-36 {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 13px;
+  color: #fff;
+}
+.ell {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.owner-mini {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.owner-badge {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 26px;
+  border-radius: 50%;
+  background: var(--surface-3);
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-2);
+}
+.drawer {
+  width: 320px;
+  flex: 0 0 320px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  align-self: flex-start;
+  overflow: hidden;
+}
+.drawer-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.drawer-body {
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.drawer-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 10px;
+}
+.stage-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 9px 11px;
+  margin-bottom: 7px;
+}
+.dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+.switch {
+  width: 34px;
+  height: 20px;
+  border-radius: 999px;
+  position: relative;
+  flex: 0 0 34px;
+  cursor: pointer;
+  border: none;
+}
+.switch.on {
+  background: var(--accent);
+}
+.switch.off {
+  background: var(--border-strong);
+}
+.switch .knob {
+  position: absolute;
+  top: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+}
+.switch.on .knob {
+  right: 2px;
+}
+.switch.off .knob {
+  left: 2px;
+}
+.dashed-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-strong);
+  border: 1px dashed var(--accent);
+  border-radius: 10px;
+  padding: 9px;
+  cursor: pointer;
+  background: transparent;
+  width: 100%;
+}
+.sync-note {
+  display: flex;
+  gap: 9px;
+  background: var(--accent-soft-2);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  padding: 11px 12px;
+  font-size: 12px;
+  color: var(--text-2);
+  line-height: 1.45;
+}
+
 /* ---- Responsive / mobile (REQ-025) ------------------------------------- */
 @media (max-width: 860px) {
   /* Sidebar collapses to a horizontal, scrollable top nav. */
