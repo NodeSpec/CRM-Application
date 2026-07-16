@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { useMeta } from "../lib/useMeta";
+import { Star, DataLegend } from "../components/NeedsData";
 
 /**
  * Contacts (REQ-019) — reproduces design option 2A: rich avatar table with an
@@ -125,6 +126,7 @@ export function ContactsPage() {
           <span className="muted tnum" style={{ fontSize: 13 }}>
             {rows.length} shown
           </span>
+          <DataLegend />
           <span className="spacer" />
           {isAdmin && (
             <button
@@ -205,8 +207,11 @@ export function ContactsPage() {
           <div className="cg-head">
             <span>Name</span>
             <span>Account</span>
+            <span className="cg-col-type">Type<Star note="Contacts aren't classified B2B/B2G in our model yet" /></span>
             <span>Stage</span>
-            <span>Owner</span>
+            <span className="cg-col-owner">Owner</span>
+            <span className="cg-num cg-col-value">Deal value<Star note="No per-contact deal rollup captured yet" /></span>
+            <span className="cg-num cg-col-touch">Last touch<Star note="No last-activity timestamp per contact yet" /></span>
           </div>
           {rows.length === 0 ? (
             <div className="cg-row"><span className="muted">No contacts match.</span></div>
@@ -224,6 +229,9 @@ export function ContactsPage() {
                   <div className="ell" style={{ fontSize: 13.5, fontWeight: 500 }}>{c.company_id ? companies[c.company_id] ?? "—" : "—"}</div>
                   <div className="ell muted" style={{ fontSize: 12 }}>{c.title}</div>
                 </div>
+                <div className="cg-col-type">
+                  <span className="muted" title="Not captured yet">—</span>
+                </div>
                 <div>
                   {c.lifecycle_stage ? (
                     <span className="stage-chip" style={{ background: "var(--surface-3)", color: "var(--text-2)" }}>
@@ -234,7 +242,7 @@ export function ContactsPage() {
                     <span className="muted">—</span>
                   )}
                 </div>
-                <div className="owner-mini">
+                <div className="owner-mini cg-col-owner">
                   {c.owner_id ? (
                     <>
                       <span className="owner-badge">{initials(ownerName(c.owner_id) || "?")}</span>
@@ -244,11 +252,26 @@ export function ContactsPage() {
                     <span className="muted">Unassigned</span>
                   )}
                 </div>
+                <div className="cg-num cg-col-value">
+                  <span className="muted" title="Not captured yet">—</span>
+                </div>
+                <div className="cg-num cg-col-touch">
+                  <span className="muted" title="Not captured yet">—</span>
+                </div>
               </div>
             ))
           )}
         </div>
       </div>
+
+      {/* Mobile FAB (design 2B) — quick "New contact" */}
+      <button
+        className="mobile-fab"
+        aria-label="New contact"
+        onClick={() => setShowForm((v) => !v)}
+      >
+        <span className="material-symbols-rounded">add</span>
+      </button>
 
       {/* Admin customize drawer */}
       {isAdmin && showDrawer && (

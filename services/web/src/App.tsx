@@ -1,5 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import { Sidebar } from "./components/Sidebar";
+import { MobileTabBar } from "./components/MobileTabBar";
 import { Topbar } from "./components/Topbar";
 import { Dashboard } from "./pages/Dashboard";
 import { AdminPage } from "./pages/AdminPage";
@@ -99,6 +100,7 @@ export default function App() {
           </Routes>
         </div>
       </div>
+      <MobileTabBar />
     </div>
   );
 }

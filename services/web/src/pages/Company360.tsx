@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useParams, Link } from "react-router-dom";
 import { api } from "../api/client";
 import { useMeta } from "../lib/useMeta";
+import { Star, DataLegend } from "../components/NeedsData";
 
 /**
  * Company / Account 360 (REQ-020) — reproduces design option 4A with our data:
@@ -118,6 +119,8 @@ export function Company360() {
         <Link to="/companies" className="muted">
           ← Companies
         </Link>
+        <span className="spacer" />
+        <DataLegend />
       </div>
 
       {/* Header + rollup */}
@@ -236,13 +239,38 @@ export function Company360() {
               <div><div className="dtl-label">Industry</div><div className="dtl-val">{company.industry || "—"}</div></div>
               <div><div className="dtl-label">Segment</div><div className="dtl-val">{company.segment || "—"}</div></div>
               <div><div className="dtl-label">Owner</div><div className="dtl-val">{ownerName(company.owner_id) || "—"}</div></div>
+              <div><div className="dtl-label">Founded<Star note="No founded-year field in our schema" /></div><div className="dtl-val muted">—</div></div>
+              <div><div className="dtl-label">Annual revenue<Star note="Company financials aren't tracked" /></div><div className="dtl-val muted">—</div></div>
+              <div><div className="dtl-label">Customer since<Star note="No first-close / customer-since date captured" /></div><div className="dtl-val muted">—</div></div>
             </div>
             {company.about && <p className="muted" style={{ marginBottom: 0 }}>{company.about}</p>}
           </div>
         </div>
 
-        {/* Right: activity timeline (real) */}
+        {/* Right: social activity (design 4A — not backed) + real activity timeline */}
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          <div className="panel">
+            <div className="panel-head">
+              <div className="icon-title" style={{ marginBottom: 0 }}>
+                <span className="material-symbols-rounded">rss_feed</span>Social activity
+                <Star note="No social-media integration — needs LinkedIn/X/Instagram connectors" />
+              </div>
+            </div>
+            <div className="muted" style={{ fontSize: 12.5, marginBottom: 6 }}>
+              Track what {company.name} posts across channels.
+            </div>
+            <div className="social-tabs">
+              <span className="social-tab on">All</span>
+              <span className="social-tab"><span className="pf-badge" style={{ background: "#0a66c2" }}>in</span>LinkedIn</span>
+              <span className="social-tab"><span className="pf-badge" style={{ background: "#111" }}>X</span></span>
+              <span className="social-tab"><span className="pf-badge" style={{ background: "linear-gradient(135deg,#f58529,#dd2a7b,#8134af)" }}><span className="material-symbols-rounded" style={{ fontSize: 11 }}>photo_camera</span></span></span>
+            </div>
+            <div className="nd-empty">
+              <span className="material-symbols-rounded">link</span>
+              <div>No channels connected yet.<br />Social posts appear here once an account is linked.</div>
+            </div>
+          </div>
+
           <div className="panel">
             <div className="panel-head">
               <div className="icon-title" style={{ marginBottom: 0 }}>

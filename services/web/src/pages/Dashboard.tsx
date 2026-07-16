@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, ApiError } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
+import { Star, DataLegend } from "../components/NeedsData";
 
 /**
  * Unified home dashboard (REQ-013), styled after design 1A "Calm" but populated
@@ -119,6 +120,9 @@ export function Dashboard() {
           })}
           .
         </div>
+        <div style={{ marginTop: 10 }}>
+          <DataLegend />
+        </div>
       </div>
 
       {error && <p className="error">{error}</p>}
@@ -153,11 +157,11 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Panels: leads-by-status pipeline + publicity-by-format */}
+      {/* Panels: leads-by-status pipeline (real) + revenue trend (design 1A) */}
       <div className="grid-2">
         <div className="panel">
           <div className="panel-head">
-            <div className="panel-title">Leads by status</div>
+            <div className="panel-title">Sales pipeline</div>
             <Link to="/b2b-leads" className="muted" style={{ fontSize: 13 }}>
               View all →
             </Link>
@@ -189,12 +193,45 @@ export function Dashboard() {
                 {r.status}
               </Link>
               <span className="pipe-count tnum">{r.n}</span>
+              <span className="pipe-val">
+                <span className="muted" title="Per-stage value not aggregated yet">
+                  —
+                </span>
+                <Star note="Per-stage pipeline value isn't aggregated yet" />
+              </span>
             </div>
           ))}
           <div className="kpi-sub">{totalLeads} leads total</div>
         </div>
 
-        <div className="panel">
+        <div className="panel" style={{ display: "flex", flexDirection: "column" }}>
+          <div className="panel-head">
+            <div className="panel-title">
+              Revenue<Star note="Monthly revenue history isn't computed — bars are placeholder" />
+            </div>
+            <span className="badge">6 mo</span>
+          </div>
+          <div className="kpi-value tnum">{money(s?.won_revenue)}</div>
+          <div className="kpi-sub">Closed-won, all time (real)</div>
+          <div className="rev-chart">
+            {["Feb", "Mar", "Apr", "May", "Jun", "Jul"].map((m, i) => (
+              <div className={"rev-col" + (i === 5 ? " hi" : "")} key={m}>
+                <div
+                  className="bar"
+                  style={{ height: `${[52, 44, 66, 58, 78, 100][i]}%` }}
+                />
+                <span>{m}</span>
+              </div>
+            ))}
+          </div>
+          <div className="kpi-sub" style={{ marginTop: 10 }}>
+            Monthly trend shown for layout only.
+          </div>
+        </div>
+      </div>
+
+      {/* Publicity (real) */}
+      <div className="panel">
           <div className="panel-head">
             <div className="panel-title">Publicity contacts by format</div>
           </div>
@@ -215,7 +252,6 @@ export function Dashboard() {
               <li className="muted">No contacts yet.</li>
             )}
           </ul>
-        </div>
       </div>
 
       {/* Recent activity + tasks due (REQ-024) */}

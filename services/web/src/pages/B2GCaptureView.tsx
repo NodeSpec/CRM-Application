@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useParams, Link } from "react-router-dom";
 import { api } from "../api/client";
+import { Star, DataLegend } from "../components/NeedsData";
 
 /**
  * B2G Federal Capture cockpit (REQ-022) — reproduces design option 3A with our
@@ -57,11 +58,24 @@ const avatarColor = (s: string) =>
 const gateOk = (status: unknown) =>
   /complete|done|pass|approved|on file|current|ok|verified/i.test(String(status ?? ""));
 
-function Detail({ label, value }: { label: string; value?: unknown }) {
+function Detail({
+  label,
+  value,
+  star,
+}: {
+  label: string;
+  value?: unknown;
+  star?: string;
+}) {
   return (
     <div>
-      <div className="dtl-label">{label}</div>
-      <div className="dtl-val">{value ? String(value) : "—"}</div>
+      <div className="dtl-label">
+        {label}
+        {star && <Star note={star} />}
+      </div>
+      <div className={"dtl-val" + (value ? "" : " muted")}>
+        {value ? String(value) : "—"}
+      </div>
     </div>
   );
 }
@@ -155,6 +169,8 @@ export function B2GCaptureView() {
         <Link to="/b2g-opportunities" className="muted">
           ← B2G Opportunities
         </Link>
+        <span className="spacer" />
+        <DataLegend />
       </div>
 
       {/* Classification header */}
@@ -178,9 +194,13 @@ export function B2GCaptureView() {
             </div>
           </div>
           <div style={{ flex: "0 0 auto", textAlign: "right" }}>
-            <div className="dtl-label">Response due</div>
-            <div className="value-lg tnum">{opp.due_date ? opp.due_date.slice(0, 10) : "—"}</div>
-            <div className="detail-sub">{opp.status ?? ""}</div>
+            <div className="dtl-label">
+              Est. ceiling value<Star note="No contract ceiling / IDIQ value field captured" />
+            </div>
+            <div className="value-lg tnum muted">—</div>
+            <div className="detail-sub">
+              Response due {opp.due_date ? opp.due_date.slice(0, 10) : "—"}
+            </div>
           </div>
         </div>
         {/* Capture lifecycle stepper */}
@@ -217,6 +237,11 @@ export function B2GCaptureView() {
                 value={opp.fit_score_numeric ?? opp.fit_score_tier}
               />
               <Detail label="Status" value={opp.status} />
+              <Detail label="Contract vehicle" star="No contract-vehicle field (e.g. OTA/GSA/IDIQ) yet" />
+              <Detail label="Contract type" star="No contract-type field (e.g. CPFF/FFP) yet" />
+              <Detail label="Color of money" star="No appropriation / color-of-money field yet" />
+              <Detail label="Jurisdiction" star="Federal/State/Local jurisdiction not modeled yet" />
+              <Detail label="Period of perf." star="No period-of-performance field yet" />
             </div>
           </div>
 
@@ -277,6 +302,14 @@ export function B2GCaptureView() {
               </div>
             ))}
             {teaming.length === 0 && <p className="muted">No teaming partners yet.</p>}
+            <div className="team-row" style={{ borderTop: "1px solid var(--border)" }}>
+              <span className="material-symbols-rounded" style={{ fontSize: 18, color: "var(--text-3)" }}>military_tech</span>
+              <span className="muted" style={{ fontSize: 12.5, flex: 1 }}>
+                CPARS / past-performance ratings
+                <Star note="No CPARS / past-performance rating field captured" />
+              </span>
+              <span className="muted">—</span>
+            </div>
             <AddRow
               resource="b2g-teaming-partners"
               oppId={opp.id}
@@ -343,6 +376,35 @@ export function B2GCaptureView() {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+
+          <div className="panel">
+            <div className="icon-title">
+              <span className="material-symbols-rounded">event</span>Acquisition milestones
+              <Star note="No structured acquisition-milestone dates (RFI/Industry Day/Draft RFP/Award) modeled yet" />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              {[
+                { label: "Sources Sought / RFI", state: "done" as const },
+                { label: "Industry Day", state: "done" as const },
+                { label: "Draft RFP / Q&A", state: "now" as const },
+                { label: "Proposal due", state: "todo" as const },
+                { label: "Award target", state: "todo" as const, last: true },
+              ].map((m) => (
+                <div className="ms-item" key={m.label}>
+                  <div className="ms-rail">
+                    <span className={"ms-dot" + (m.state === "done" ? " done" : m.state === "now" ? " now" : "")} />
+                    {!m.last && <span className="ms-line" />}
+                  </div>
+                  <div style={{ paddingBottom: m.last ? 0 : 14 }}>
+                    <div style={{ fontSize: 13, fontWeight: m.state === "now" ? 700 : 600, color: m.state === "now" ? "var(--accent-strong)" : m.state === "todo" ? "var(--text-2)" : "var(--text)" }}>
+                      {m.label}
+                    </div>
+                    <div className="muted" style={{ fontSize: 12 }}>Date not tracked</div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
