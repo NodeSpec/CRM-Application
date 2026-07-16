@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { api, ApiError } from "../api/client";
 import type { Column, Field, ModuleConfig, OptionSource } from "../modules";
 import { useMeta, type Meta } from "../lib/useMeta";
@@ -25,6 +25,13 @@ function fieldOptions(source: OptionSource | undefined, meta: Meta | null) {
     return meta.lead_statuses.map((s) => ({ value: s.label, label: s.label }));
   if (source === "submission_categories")
     return meta.submission_categories.map((c) => ({ value: c.id, label: c.label }));
+  if (source === "contact_lifecycle_stages")
+    return meta.contact_lifecycle_stages.map((s) => ({ value: s, label: s }));
+  if (source === "owners")
+    return meta.owners.map((o) => ({
+      value: o.id,
+      label: o.display_name || o.email,
+    }));
   return meta.publicity_formats.map((f) => ({ value: f, label: f }));
 }
 
@@ -275,8 +282,16 @@ export function ResourcePage({ config }: { config: ModuleConfig }) {
             ) : (
               rows.map((row, i) => (
                 <tr key={(row.id as string) ?? i}>
-                  {columns.map((c) => (
-                    <td key={c.key}>{renderCell(row, c)}</td>
+                  {columns.map((c, ci) => (
+                    <td key={c.key}>
+                      {ci === 0 && config.detailPath && row.id ? (
+                        <Link to={`${config.detailPath}/${row.id}`}>
+                          {renderCell(row, c)}
+                        </Link>
+                      ) : (
+                        renderCell(row, c)
+                      )}
+                    </td>
                   ))}
                 </tr>
               ))

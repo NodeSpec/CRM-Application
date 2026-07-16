@@ -5,6 +5,9 @@ import { Dashboard } from "./pages/Dashboard";
 import { AdminPage } from "./pages/AdminPage";
 import { ResourcePage } from "./pages/ResourcePage";
 import { EventsPage } from "./pages/EventsPage";
+import { DealsKanban } from "./pages/DealsKanban";
+import { Company360 } from "./pages/Company360";
+import { ContactDetail } from "./pages/ContactDetail";
 import { CategoriesAdmin } from "./pages/admin/CategoriesAdmin";
 import { UsersAdmin } from "./pages/admin/UsersAdmin";
 import { AuditAdmin } from "./pages/admin/AuditAdmin";
@@ -68,6 +71,9 @@ export default function App() {
                 />
               )
             )}
+            <Route path="/deals" element={<DealsKanban />} />
+            <Route path="/companies/:id" element={<Company360 />} />
+            <Route path="/contacts/:id" element={<ContactDetail />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/admin/categories" element={<CategoriesAdmin />} />
             <Route path="/admin/users" element={<UsersAdmin />} />

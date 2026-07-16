@@ -23,6 +23,13 @@ function options(source: OptionSource | undefined, meta: Meta | null) {
       value: c.id,
       label: c.label,
     }));
+  if (source === "contact_lifecycle_stages")
+    return meta.contact_lifecycle_stages.map((s) => ({ value: s, label: s }));
+  if (source === "owners")
+    return meta.owners.map((o) => ({
+      value: o.id,
+      label: o.display_name || o.email,
+    }));
   return meta.publicity_formats.map((f) => ({ value: f, label: f }));
 }
 

@@ -9,7 +9,9 @@ export type ColType = "text" | "date" | "link" | "number" | "bool";
 export type OptionSource =
   | "lead_statuses"
   | "submission_categories"
-  | "publicity_formats";
+  | "publicity_formats"
+  | "contact_lifecycle_stages"
+  | "owners";
 
 export interface Column {
   key: string;
@@ -46,6 +48,8 @@ export interface ModuleConfig {
   /** Show the free-text search box (maps to ?q=). */
   searchable?: boolean;
   filters?: FilterDef[];
+  /** If set, the first column links to `${detailPath}/${row.id}` (detail view). */
+  detailPath?: string;
 }
 
 export const MODULES: Record<string, ModuleConfig> = {
@@ -59,6 +63,7 @@ export const MODULES: Record<string, ModuleConfig> = {
       { key: "industry_vertical", label: "Industry" },
       { key: "primary_poc", label: "Primary POC" },
       { key: "status", label: "Status" },
+      { key: "amount", label: "Amount", type: "number" },
       { key: "next_follow_up_date", label: "Next Follow-up", type: "date" },
       { key: "reminder_date", label: "Reminder", type: "date" },
     ],
@@ -66,6 +71,7 @@ export const MODULES: Record<string, ModuleConfig> = {
       { name: "status", label: "Status", type: "select", optionsFrom: "lead_statuses" },
       { name: "industry_vertical", label: "Industry", type: "text" },
       { name: "lead_source", label: "Lead Source", type: "text" },
+      { name: "owner_id", label: "Owner", type: "select", optionsFrom: "owners" },
       { name: "initial_contact_date", label: "Initial Contact", type: "dateRange" },
       { name: "next_follow_up_date", label: "Next Follow-up", type: "dateRange" },
     ],
@@ -77,6 +83,9 @@ export const MODULES: Record<string, ModuleConfig> = {
       { name: "contact_email", label: "Contact Email", type: "email" },
       { name: "lead_source", label: "Lead Source" },
       { name: "status", label: "Status", type: "select", optionsFrom: "lead_statuses" },
+      { name: "amount", label: "Deal Amount", type: "number" },
+      { name: "close_date", label: "Expected Close Date", type: "date" },
+      { name: "owner_id", label: "Owner", type: "select", optionsFrom: "owners" },
       { name: "next_follow_up_date", label: "Next Follow-up Date", type: "date" },
       { name: "reminder_date", label: "Reminder Date", type: "date" },
       { name: "notes", label: "Notes", type: "textarea" },
@@ -179,6 +188,101 @@ export const MODULES: Record<string, ModuleConfig> = {
       { name: "contact_name", label: "Contact Name" },
       { name: "email", label: "Email", type: "email", required: true },
       { name: "notes", label: "Notes", type: "textarea" },
+    ],
+  },
+  companies: {
+    title: "Companies",
+    resource: "companies",
+    description: "Company / account records with a 360 view (REQ-020).",
+    searchable: true,
+    detailPath: "/companies",
+    columns: [
+      { key: "name", label: "Company" },
+      { key: "industry", label: "Industry" },
+      { key: "segment", label: "Segment" },
+      { key: "website", label: "Website", type: "link" },
+    ],
+    filters: [
+      { name: "industry", label: "Industry", type: "text" },
+      { name: "segment", label: "Segment", type: "text" },
+      { name: "owner_id", label: "Owner", type: "select", optionsFrom: "owners" },
+    ],
+    fields: [
+      { name: "name", label: "Company Name", required: true },
+      { name: "website", label: "Website", type: "url" },
+      { name: "industry", label: "Industry" },
+      { name: "segment", label: "Segment" },
+      { name: "owner_id", label: "Owner", type: "select", optionsFrom: "owners" },
+      { name: "about", label: "About", type: "textarea" },
+    ],
+  },
+  contacts: {
+    title: "Contacts",
+    resource: "contacts",
+    description: "People you work with, linked to companies (REQ-019).",
+    searchable: true,
+    detailPath: "/contacts",
+    columns: [
+      { key: "full_name", label: "Name" },
+      { key: "title", label: "Title" },
+      { key: "email", label: "Email" },
+      { key: "phone", label: "Phone" },
+      { key: "lifecycle_stage", label: "Stage" },
+    ],
+    filters: [
+      { name: "lifecycle_stage", label: "Lifecycle", type: "select", optionsFrom: "contact_lifecycle_stages" },
+      { name: "owner_id", label: "Owner", type: "select", optionsFrom: "owners" },
+    ],
+    fields: [
+      { name: "full_name", label: "Full Name", required: true },
+      { name: "title", label: "Title" },
+      { name: "email", label: "Email", type: "email" },
+      { name: "phone", label: "Phone" },
+      { name: "lifecycle_stage", label: "Lifecycle Stage", type: "select", optionsFrom: "contact_lifecycle_stages" },
+      { name: "owner_id", label: "Owner", type: "select", optionsFrom: "owners" },
+      { name: "notes", label: "Notes", type: "textarea" },
+    ],
+  },
+  activities: {
+    title: "Activities",
+    resource: "activities",
+    description: "Logged calls, emails, notes and meetings (REQ-024).",
+    searchable: true,
+    columns: [
+      { key: "occurred_at", label: "When", type: "date" },
+      { key: "type", label: "Type" },
+      { key: "subject", label: "Subject" },
+      { key: "module", label: "Module" },
+    ],
+    filters: [
+      { name: "type", label: "Type", type: "text" },
+      { name: "module", label: "Module", type: "text" },
+    ],
+    fields: [
+      { name: "type", label: "Type (call/email/note/meeting)" },
+      { name: "subject", label: "Subject", required: true },
+      { name: "body", label: "Note", type: "textarea" },
+    ],
+  },
+  tasks: {
+    title: "Tasks",
+    resource: "tasks",
+    description: "To-dos with due dates and assignees (REQ-024).",
+    searchable: true,
+    columns: [
+      { key: "title", label: "Task" },
+      { key: "due_date", label: "Due", type: "date" },
+      { key: "status", label: "Status" },
+    ],
+    filters: [
+      { name: "status", label: "Status", type: "text" },
+      { name: "assignee_id", label: "Assignee", type: "select", optionsFrom: "owners" },
+      { name: "due_date", label: "Due", type: "dateRange" },
+    ],
+    fields: [
+      { name: "title", label: "Title", required: true },
+      { name: "due_date", label: "Due Date", type: "date" },
+      { name: "assignee_id", label: "Assignee", type: "select", optionsFrom: "owners" },
     ],
   },
 };

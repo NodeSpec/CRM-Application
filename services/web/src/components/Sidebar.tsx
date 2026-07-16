@@ -13,11 +13,16 @@ interface NavItem {
 
 const NAV: NavItem[] = [
   { to: "/", label: "Dashboard", icon: "space_dashboard", end: true },
+  { to: "/companies", label: "Companies", icon: "apartment" },
+  { to: "/contacts", label: "Contacts", icon: "person" },
   { to: "/b2b-leads", label: "B2B Leads", icon: "groups" },
+  { to: "/deals", label: "Pipeline", icon: "view_kanban" },
   { to: "/b2g-opportunities", label: "B2G Opportunities", icon: "handshake" },
   { to: "/events", label: "Events", icon: "event" },
   { to: "/submissions", label: "Submissions", icon: "description" },
   { to: "/publicity-contacts", label: "Publicity", icon: "campaign" },
+  { to: "/activities", label: "Activities", icon: "bolt" },
+  { to: "/tasks", label: "Tasks", icon: "task_alt" },
   { to: "/admin", label: "Admin", icon: "admin_panel_settings", admin: true },
 ];
 

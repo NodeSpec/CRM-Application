@@ -15,6 +15,18 @@ interface Summary {
   b2g_opportunities_nearing_due_date: number;
   publicity_contacts_by_format: { format: string; n: number }[];
   leads_by_status: { status: string; n: number }[];
+  open_pipeline_value: number;
+  won_revenue: number;
+  open_deals: number;
+  recent_activities: {
+    id: string;
+    type: string;
+    subject?: string;
+    module?: string;
+    occurred_at: string;
+    actor?: string | null;
+  }[];
+  tasks_due: { id: string; title: string; due_date?: string }[];
   thresholds: {
     b2g_due_date_threshold_days: number;
     submission_deadline_threshold_days: number;
@@ -27,6 +39,9 @@ function greetingWord(d: Date): string {
   if (h < 18) return "Good afternoon";
   return "Good evening";
 }
+
+const money = (n?: number) =>
+  n == null ? "—" : "$" + Number(n).toLocaleString();
 
 export function Dashboard() {
   const { user } = useAuth();
@@ -124,6 +139,20 @@ export function Dashboard() {
         ))}
       </div>
 
+      {/* Revenue / pipeline (from real deal amounts, REQ-021) */}
+      <div className="stat-row">
+        <Link to="/deals" className="kpi-card">
+          <div className="kpi-label">Open pipeline value</div>
+          <div className="kpi-value tnum">{money(s?.open_pipeline_value)}</div>
+          <div className="kpi-sub">{s?.open_deals ?? 0} open deals</div>
+        </Link>
+        <div className="kpi-card">
+          <div className="kpi-label">Won revenue</div>
+          <div className="kpi-value tnum">{money(s?.won_revenue)}</div>
+          <div className="kpi-sub">Closed-won deals</div>
+        </div>
+      </div>
+
       {/* Panels: leads-by-status pipeline + publicity-by-format */}
       <div className="grid-2">
         <div className="panel">
@@ -186,6 +215,48 @@ export function Dashboard() {
               <li className="muted">No contacts yet.</li>
             )}
           </ul>
+        </div>
+      </div>
+
+      {/* Recent activity + tasks due (REQ-024) */}
+      <div className="grid-2">
+        <div className="panel">
+          <div className="panel-head">
+            <div className="panel-title">Recent activity</div>
+            <Link to="/activities" className="muted" style={{ fontSize: 13 }}>
+              View all →
+            </Link>
+          </div>
+          {(s?.recent_activities ?? []).map((a) => (
+            <div className="feed-row" key={a.id}>
+              <span className="badge">{a.type}</span>
+              <span style={{ flex: 1 }}>{a.subject}</span>
+              <span className="muted">{a.occurred_at.slice(0, 10)}</span>
+            </div>
+          ))}
+          {s && s.recent_activities.length === 0 && (
+            <p className="muted">No activity yet.</p>
+          )}
+        </div>
+        <div className="panel">
+          <div className="panel-head">
+            <div className="panel-title">Tasks due</div>
+            <Link to="/tasks" className="muted" style={{ fontSize: 13 }}>
+              View all →
+            </Link>
+          </div>
+          {(s?.tasks_due ?? []).map((t) => (
+            <div className="feed-row" key={t.id}>
+              <span className="material-symbols-rounded" style={{ fontSize: 18 }}>
+                task_alt
+              </span>
+              <span style={{ flex: 1 }}>{t.title}</span>
+              <span className="muted">{t.due_date?.slice(0, 10) ?? ""}</span>
+            </div>
+          ))}
+          {s && s.tasks_due.length === 0 && (
+            <p className="muted">Nothing due. 🎉</p>
+          )}
         </div>
       </div>
     </>
