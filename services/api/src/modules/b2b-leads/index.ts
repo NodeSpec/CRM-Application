@@ -19,6 +19,13 @@ export const b2bLeadSchema = z.object({
   next_follow_up_date: z.coerce.date().optional(),
   reminder_date: z.coerce.date().optional(),
   notes: z.string().optional(),
+  // Deal fields (REQ-021)
+  amount: z.number().nonnegative().optional(),
+  close_date: z.coerce.date().optional(),
+  owner_id: z.string().uuid().optional(),
+  company_id: z.string().uuid().optional(),
+  contact_id: z.string().uuid().optional(),
+  custom_fields: z.record(z.unknown()).optional(),
 });
 
 export const b2bLeadsRouter = makeCrudRouter({
@@ -38,6 +45,13 @@ export const b2bLeadsRouter = makeCrudRouter({
     "next_follow_up_date",
     "reminder_date",
     "notes",
+    "amount",
+    "close_date",
+    "owner_id",
+    "company_id",
+    "contact_id",
+    "custom_fields",
   ],
   searchable: ["company_name", "primary_poc", "notes"],
+  jsonColumns: ["custom_fields"],
 });

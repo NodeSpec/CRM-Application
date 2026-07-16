@@ -28,6 +28,13 @@ export interface CrudOptions {
   /** Whether the table has a `created_by` owner column (default true). Set
    *  false for tables without one (e.g. submission_categories). */
   trackOwner?: boolean;
+  /** Column the current user's id is written to on create (default
+   *  "created_by"). Use e.g. "actor_id" for tables with a different owner col. */
+  ownerColumn?: string;
+  /** Columns of JSONB type — values are JSON-encoded before binding. */
+  jsonColumns?: string[];
+  /** Whether the table has an `updated_at` column (default true). */
+  hasUpdatedAt?: boolean;
   /** Role required to create/update (defaults to any authenticated user). */
   writeRole?: Role;
   /** Role required to delete (defaults to any authenticated user). */
@@ -51,6 +58,15 @@ export function makeCrudRouter(opts: CrudOptions): Router {
   const router = Router();
   const { module, table, columns, schema } = opts;
   const searchable = opts.searchable ?? [];
+  const jsonCols = new Set(opts.jsonColumns ?? []);
+  const ownerCol =
+    opts.trackOwner === false ? null : (opts.ownerColumn ?? "created_by");
+  const hasUpdatedAt = opts.hasUpdatedAt !== false;
+
+  // JSON-encode values bound to JSONB columns; pass everything else through
+  // (node-postgres handles arrays -> Postgres array literals natively).
+  const enc = (col: string, val: unknown) =>
+    jsonCols.has(col) ? JSON.stringify(val) : val;
 
   async function audit(
     action: AuditAction,
@@ -137,9 +153,9 @@ export function makeCrudRouter(opts: CrudOptions): Router {
     try {
       const provided = columns.filter((c) => req.body[c] !== undefined);
       const cols = [...provided];
-      const values = provided.map((c) => req.body[c]);
-      if (opts.trackOwner !== false) {
-        cols.push("created_by");
+      const values = provided.map((c) => enc(c, req.body[c]));
+      if (ownerCol) {
+        cols.push(ownerCol);
         values.push(req.principal?.userId ?? null);
       }
       const placeholders = cols.map((_, i) => `$${i + 1}`).join(", ");
@@ -167,10 +183,11 @@ export function makeCrudRouter(opts: CrudOptions): Router {
       const provided = columns.filter((c) => req.body[c] !== undefined);
       if (provided.length === 0) return res.json(before);
       const sets = provided.map((c, i) => `${c} = $${i + 1}`);
-      const values = provided.map((c) => req.body[c]);
+      const values = provided.map((c) => enc(c, req.body[c]));
       values.push(req.params.id);
+      const touch = hasUpdatedAt ? ", updated_at = now()" : "";
       const { rows } = await pool.query(
-        `UPDATE ${table} SET ${sets.join(", ")}, updated_at = now() WHERE id = $${values.length} RETURNING *`,
+        `UPDATE ${table} SET ${sets.join(", ")}${touch} WHERE id = $${values.length} RETURNING *`,
         values
       );
       await audit("update", req, rows[0].id, before, rows[0]);

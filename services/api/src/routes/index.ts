@@ -11,6 +11,16 @@ import { dashboardRouter } from "../modules/dashboard/index.js";
 import { auditRouter } from "../modules/audit/index.js";
 import { metaRouter } from "../modules/meta/index.js";
 import { usersRouter } from "../modules/users/index.js";
+import { companiesRouter } from "../modules/companies/index.js";
+import { contactsRouter } from "../modules/contacts/index.js";
+import { activitiesRouter } from "../modules/activities/index.js";
+import { tasksRouter } from "../modules/tasks/index.js";
+import { customFieldDefsRouter } from "../modules/custom-field-defs/index.js";
+import {
+  teamingRouter,
+  stakeholdersRouter,
+  gatesRouter,
+} from "../modules/b2g-capture/index.js";
 
 /**
  * Versioned API surface (REQ-016). Every CRM module hangs off `/api/v1`.
@@ -38,3 +48,13 @@ v1Router.use("/dashboard", dashboardRouter);
 v1Router.use("/audit", auditRouter);
 v1Router.use("/meta", metaRouter);
 v1Router.use("/users", usersRouter);
+
+// Design-expansion modules (REQ-019–024)
+v1Router.use("/companies", companiesRouter);
+v1Router.use("/contacts", contactsRouter);
+v1Router.use("/activities", activitiesRouter);
+v1Router.use("/tasks", tasksRouter);
+v1Router.use("/custom-field-defs", customFieldDefsRouter);
+v1Router.use("/b2g-teaming-partners", teamingRouter);
+v1Router.use("/b2g-stakeholders", stakeholdersRouter);
+v1Router.use("/b2g-compliance-gates", gatesRouter);
