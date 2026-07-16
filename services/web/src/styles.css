@@ -736,6 +736,314 @@ tbody tr:hover {
   border-color: transparent;
 }
 
+/* ---- Detail views (mockup fidelity) ------------------------------------ */
+.detail-header {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  box-shadow: var(--shadow-sm);
+}
+.crumb {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  font-size: 12.5px;
+  color: var(--text-3);
+  font-weight: 600;
+}
+.detail-title {
+  font-weight: 800;
+  font-size: 22px;
+  letter-spacing: -0.01em;
+  margin-top: 9px;
+}
+.detail-sub {
+  font-size: 13.5px;
+  color: var(--text-2);
+  margin-top: 3px;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  color: var(--text-2);
+}
+.chip .material-symbols-rounded {
+  font-size: 14px;
+}
+.chip-fed {
+  background: color-mix(in srgb, #a855f7 16%, var(--surface));
+  color: #a855f7;
+}
+.chip-b2b {
+  background: color-mix(in srgb, var(--info) 14%, var(--surface));
+  color: var(--info);
+}
+.chip-secret {
+  background: color-mix(in srgb, var(--neg) 15%, var(--surface));
+  color: var(--neg);
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--neg) 40%, transparent);
+}
+.icon-title {
+  font-weight: 700;
+  font-size: 15px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.icon-title .material-symbols-rounded {
+  font-size: 19px;
+  color: var(--accent-strong);
+}
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px 20px;
+}
+.dtl-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.dtl-val {
+  font-size: 13.5px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+.gate-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+}
+.gate {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 11px;
+  background: var(--surface-3);
+}
+.gate.ok {
+  background: var(--pos-soft);
+}
+.gate.warn {
+  background: var(--warn-soft);
+}
+.gate .g-ic {
+  font-size: 18px;
+}
+.gate.ok .g-ic {
+  color: var(--pos);
+}
+.gate.warn .g-ic {
+  color: var(--warn);
+}
+.gate .g-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+.gate .g-sub {
+  font-size: 11.5px;
+  color: var(--text-2);
+}
+.team-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid var(--border);
+}
+.team-row:first-of-type {
+  border-top: none;
+}
+.tag {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--surface-3);
+  color: var(--text-2);
+}
+.tag.prime {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+.avatar-sm {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 12px;
+  flex: 0 0 34px;
+}
+.stakeholder-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 6px 0;
+}
+.timeline {
+  display: flex;
+  flex-direction: column;
+}
+.tl-item {
+  display: flex;
+  gap: 12px;
+}
+.tl-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.tl-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--border-strong);
+  background: var(--surface);
+}
+.tl-dot.done {
+  background: var(--pos);
+  border-color: var(--pos);
+}
+.tl-dot.now {
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+.tl-line {
+  flex: 1;
+  width: 2px;
+  background: var(--border-strong);
+}
+.big-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 700;
+  font-size: 14px;
+  padding: 13px;
+  border-radius: 12px;
+  cursor: pointer;
+  border: none;
+  width: 100%;
+}
+.big-btn:hover {
+  background: var(--accent-strong);
+}
+.detail-cols {
+  display: grid;
+  grid-template-columns: 1.55fr 1fr;
+  gap: 18px;
+  align-items: start;
+}
+.value-lg {
+  font-weight: 800;
+  font-size: 26px;
+  letter-spacing: -0.02em;
+}
+.co-avatar {
+  width: 56px;
+  height: 56px;
+  flex: 0 0 56px;
+  border-radius: 15px;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 20px;
+  background: linear-gradient(135deg, #0ea5a3, #0891b2);
+}
+.stat-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-top: 20px;
+}
+.stat-mini {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  padding: 14px;
+}
+.stat-mini .m-label {
+  font-size: 12px;
+  color: var(--text-3);
+  font-weight: 600;
+}
+.stat-mini .m-val {
+  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: -0.01em;
+  margin-top: 3px;
+}
+.sync-chip {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-3);
+  background: var(--surface-3);
+  padding: 2px 8px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.sync-chip .material-symbols-rounded {
+  font-size: 13px;
+}
+.entity-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 0;
+  border-top: 1px solid var(--border);
+}
+.entity-row:first-of-type {
+  border-top: none;
+}
+.entity-ic {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border-radius: 10px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  display: grid;
+  place-items: center;
+}
+.stage-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 11px;
+  border-radius: 999px;
+}
+.feed-card {
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  padding: 13px;
+  background: var(--surface-2);
+}
+
 /* ---- Responsive / mobile (REQ-025) ------------------------------------- */
 @media (max-width: 860px) {
   /* Sidebar collapses to a horizontal, scrollable top nav. */

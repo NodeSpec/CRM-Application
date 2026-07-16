@@ -3,8 +3,10 @@ import { useParams, Link } from "react-router-dom";
 import { api } from "../api/client";
 
 /**
- * B2G Federal Capture view (REQ-022): capture lifecycle stepper, acquisition
- * details, MEDDIC qualification, and teaming / stakeholders / compliance gates.
+ * B2G Federal Capture cockpit (REQ-022) — reproduces design option 3A with our
+ * real opportunity + capture data: classification header, capture lifecycle
+ * stepper, acquisition details, compliance gates, teaming, MEDDIC, milestones,
+ * and government stakeholders.
  */
 const CAPTURE_STAGES = [
   "Identify",
@@ -12,6 +14,7 @@ const CAPTURE_STAGES = [
   "Pursue",
   "Capture",
   "Proposal",
+  "Submitted",
   "Award",
 ];
 
@@ -25,110 +28,103 @@ const MEDDIC_KEYS: [string, string][] = [
   ["competition", "Competition"],
 ];
 
+const AVATAR_COLORS = ["#6d5ef0", "#0ea5a3", "#e0682f", "#2563eb", "#12a150", "#a855f7"];
+
 interface Opp {
   id: string;
   notice_id: string;
   agency_department?: string;
+  focus_area_rr_role?: string;
   due_date?: string;
   status?: string;
+  action_officer?: string;
   naics?: string;
   set_aside?: string;
   incumbent?: string;
   solicitation_number?: string;
   clearance_level?: string;
   capture_stage?: string;
+  fit_score_numeric?: number;
+  fit_score_tier?: string;
   meddic?: Record<string, string>;
 }
+type Row = Record<string, unknown>;
 
-function Field({ label, value }: { label: string; value?: string }) {
+const initials = (s: string) =>
+  (s.trim().split(/\s+/).map((p) => p[0]).slice(0, 2).join("") || "?").toUpperCase();
+const avatarColor = (s: string) =>
+  AVATAR_COLORS[[...s].reduce((a, c) => a + c.charCodeAt(0), 0) % AVATAR_COLORS.length];
+const gateOk = (status: unknown) =>
+  /complete|done|pass|approved|on file|current|ok|verified/i.test(String(status ?? ""));
+
+function Detail({ label, value }: { label: string; value?: unknown }) {
   return (
     <div>
-      <div className="kpi-label">{label}</div>
-      <div style={{ fontWeight: 600 }}>{value || "—"}</div>
+      <div className="dtl-label">{label}</div>
+      <div className="dtl-val">{value ? String(value) : "—"}</div>
     </div>
   );
 }
 
-/** Small list of a sub-resource with an inline add row. */
-function SubList({
-  title,
+/** Inline add form for a capture sub-resource. */
+function AddRow({
   resource,
   oppId,
   fields,
-  render,
+  onAdded,
 }: {
-  title: string;
   resource: string;
   oppId: string;
   fields: { name: string; label: string }[];
-  render: (row: Record<string, unknown>) => string;
+  onAdded: () => void;
 }) {
-  const [rows, setRows] = useState<Record<string, unknown>[]>([]);
   const [form, setForm] = useState<Record<string, string>>({});
-  const load = useCallback(() => {
-    api
-      .list<Record<string, unknown>>(resource, { opportunity_id: oppId })
-      .then(setRows)
-      .catch(() => {});
-  }, [resource, oppId]);
-  useEffect(() => {
-    load();
-  }, [load]);
-
   async function add(e: FormEvent) {
     e.preventDefault();
     try {
       await api.create(resource, { opportunity_id: oppId, ...form });
       setForm({});
-      load();
+      onAdded();
     } catch {
       /* ignore */
     }
   }
-
   return (
-    <div className="panel">
-      <div className="panel-head">
-        <div className="panel-title">{title}</div>
-      </div>
-      {rows.length ? (
-        rows.map((r) => (
-          <div className="feed-row" key={r.id as string}>
-            {render(r)}
-          </div>
-        ))
-      ) : (
-        <p className="muted">None yet.</p>
-      )}
-      <form onSubmit={add} style={{ display: "flex", gap: 6, marginTop: 8 }}>
-        {fields.map((f) => (
-          <input
-            key={f.name}
-            placeholder={f.label}
-            value={form[f.name] ?? ""}
-            onChange={(e) => setForm({ ...form, [f.name]: e.target.value })}
-          />
-        ))}
-        <button className="btn" type="submit">
-          Add
-        </button>
-      </form>
-    </div>
+    <form onSubmit={add} style={{ display: "flex", gap: 6, marginTop: 10 }}>
+      {fields.map((f) => (
+        <input
+          key={f.name}
+          placeholder={f.label}
+          value={form[f.name] ?? ""}
+          onChange={(e) => setForm({ ...form, [f.name]: e.target.value })}
+        />
+      ))}
+      <button className="btn" type="submit">
+        Add
+      </button>
+    </form>
   );
 }
 
 export function B2GCaptureView() {
   const { id } = useParams();
   const [opp, setOpp] = useState<Opp | null>(null);
+  const [teaming, setTeaming] = useState<Row[]>([]);
+  const [stakeholders, setStakeholders] = useState<Row[]>([]);
+  const [gates, setGates] = useState<Row[]>([]);
   const [error, setError] = useState<string | null>(null);
 
+  const loadSubs = useCallback(() => {
+    if (!id) return;
+    api.list<Row>("b2g-teaming-partners", { opportunity_id: id }).then(setTeaming).catch(() => {});
+    api.list<Row>("b2g-stakeholders", { opportunity_id: id }).then(setStakeholders).catch(() => {});
+    api.list<Row>("b2g-compliance-gates", { opportunity_id: id }).then(setGates).catch(() => {});
+  }, [id]);
   const load = useCallback(() => {
     if (!id) return;
-    api
-      .get<Opp>("b2g-opportunities", id)
-      .then(setOpp)
-      .catch((e) => setError((e as Error).message));
-  }, [id]);
+    api.get<Opp>("b2g-opportunities", id).then(setOpp).catch((e) => setError((e as Error).message));
+    loadSubs();
+  }, [id, loadSubs]);
   useEffect(() => {
     load();
   }, [load]);
@@ -149,7 +145,9 @@ export function B2GCaptureView() {
   if (error) return <p className="error">{error}</p>;
   if (!opp) return <p className="muted">Loading…</p>;
 
-  const currentIdx = CAPTURE_STAGES.indexOf(opp.capture_stage ?? "");
+  const curIdx = CAPTURE_STAGES.indexOf(opp.capture_stage ?? "");
+  const nextStage = curIdx >= 0 && curIdx < CAPTURE_STAGES.length - 1 ? CAPTURE_STAGES[curIdx + 1] : null;
+  const gapCount = gates.filter((g) => !gateOk(g.status)).length;
 
   return (
     <>
@@ -159,22 +157,38 @@ export function B2GCaptureView() {
         </Link>
       </div>
 
-      <div className="panel">
-        <h1 style={{ margin: 0 }}>{opp.notice_id}</h1>
-        <div className="muted">
-          {[opp.agency_department, opp.status].filter(Boolean).join(" · ")}
-          {opp.due_date ? ` · Due ${opp.due_date.slice(0, 10)}` : ""}
+      {/* Classification header */}
+      <div className="detail-header">
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 16 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="crumb">
+              <span>Deals</span>
+              <span>/</span>
+              <span className="chip chip-fed">B2G · FEDERAL</span>
+              {opp.clearance_level && (
+                <span className="chip chip-secret">
+                  <span className="material-symbols-rounded">lock</span>
+                  {opp.clearance_level.toUpperCase()}
+                </span>
+              )}
+            </div>
+            <div className="detail-title">{opp.notice_id}</div>
+            <div className="detail-sub">
+              {[opp.agency_department, opp.focus_area_rr_role].filter(Boolean).join(" · ") || "—"}
+            </div>
+          </div>
+          <div style={{ flex: "0 0 auto", textAlign: "right" }}>
+            <div className="dtl-label">Response due</div>
+            <div className="value-lg tnum">{opp.due_date ? opp.due_date.slice(0, 10) : "—"}</div>
+            <div className="detail-sub">{opp.status ?? ""}</div>
+          </div>
         </div>
         {/* Capture lifecycle stepper */}
-        <div className="stepper">
+        <div className="stepper" style={{ marginTop: 18 }}>
           {CAPTURE_STAGES.map((st, i) => (
             <button
               key={st}
-              className={
-                "step" +
-                (i === currentIdx ? " active" : "") +
-                (currentIdx >= 0 && i < currentIdx ? " done" : "")
-              }
+              className={"step" + (i === curIdx ? " active" : "") + (curIdx >= 0 && i < curIdx ? " done" : "")}
               onClick={() => setStage(st)}
             >
               {st}
@@ -183,68 +197,192 @@ export function B2GCaptureView() {
         </div>
       </div>
 
-      <div className="grid-2">
-        <div className="panel">
-          <div className="panel-head">
-            <div className="panel-title">Acquisition details</div>
+      <div className="detail-cols">
+        {/* Left column */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          <div className="panel">
+            <div className="icon-title">
+              <span className="material-symbols-rounded">description</span>Acquisition details
+            </div>
+            <div className="detail-grid">
+              <Detail label="Solicitation #" value={opp.solicitation_number} />
+              <Detail label="NAICS" value={opp.naics} />
+              <Detail label="Set-aside" value={opp.set_aside} />
+              <Detail label="Clearance" value={opp.clearance_level} />
+              <Detail label="Incumbent" value={opp.incumbent} />
+              <Detail label="Focus area" value={opp.focus_area_rr_role} />
+              <Detail label="Action officer" value={opp.action_officer} />
+              <Detail
+                label="Fit score"
+                value={opp.fit_score_numeric ?? opp.fit_score_tier}
+              />
+              <Detail label="Status" value={opp.status} />
+            </div>
           </div>
-          <div className="form-grid">
-            <Field label="NAICS" value={opp.naics} />
-            <Field label="Set-Aside" value={opp.set_aside} />
-            <Field label="Incumbent" value={opp.incumbent} />
-            <Field label="Solicitation #" value={opp.solicitation_number} />
-            <Field label="Clearance" value={opp.clearance_level} />
+
+          <div className="panel">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div className="icon-title" style={{ marginBottom: 0 }}>
+                <span className="material-symbols-rounded">verified_user</span>Compliance &amp; security gates
+              </div>
+              {gapCount > 0 && (
+                <span className="chip" style={{ background: "var(--warn-soft)", color: "var(--warn)" }}>
+                  {gapCount} gap{gapCount > 1 ? "s" : ""}
+                </span>
+              )}
+            </div>
+            <div className="gate-grid" style={{ marginTop: 15 }}>
+              {gates.map((g) => {
+                const ok = gateOk(g.status);
+                return (
+                  <div className={"gate " + (ok ? "ok" : "warn")} key={g.id as string}>
+                    <span className="material-symbols-rounded g-ic">
+                      {ok ? "check_circle" : "error"}
+                    </span>
+                    <div style={{ flex: 1 }}>
+                      <div className="g-title">{String(g.label)}</div>
+                      <div className="g-sub">{String(g.status ?? "")}</div>
+                    </div>
+                  </div>
+                );
+              })}
+              {gates.length === 0 && <p className="muted">No gates yet.</p>}
+            </div>
+            <AddRow
+              resource="b2g-compliance-gates"
+              oppId={opp.id}
+              fields={[
+                { name: "label", label: "Gate" },
+                { name: "status", label: "Status" },
+              ]}
+              onAdded={loadSubs}
+            />
           </div>
-        </div>
-        <div className="panel">
-          <div className="panel-head">
-            <div className="panel-title">MEDDIC qualification</div>
-          </div>
-          <div className="form-grid">
-            {MEDDIC_KEYS.map(([k, label]) => (
-              <Field key={k} label={label} value={opp.meddic?.[k]} />
+
+          <div className="panel">
+            <div className="icon-title">
+              <span className="material-symbols-rounded">diversity_3</span>Teaming &amp; partners
+            </div>
+            {teaming.map((t) => (
+              <div className="team-row" key={t.id as string}>
+                <span className={"tag" + (/prime/i.test(String(t.role)) ? " prime" : "")}>
+                  {String(t.role || "SUB").toUpperCase()}
+                </span>
+                <span style={{ fontSize: 13.5, fontWeight: 600, flex: 1 }}>
+                  {String(t.company_name)}
+                </span>
+                <span className="muted" style={{ fontSize: 12.5 }}>
+                  {String(t.poc ?? "")}
+                </span>
+              </div>
             ))}
+            {teaming.length === 0 && <p className="muted">No teaming partners yet.</p>}
+            <AddRow
+              resource="b2g-teaming-partners"
+              oppId={opp.id}
+              fields={[
+                { name: "company_name", label: "Company" },
+                { name: "role", label: "Role (Prime/Sub)" },
+              ]}
+              onAdded={loadSubs}
+            />
+          </div>
+
+          <div className="panel">
+            <div className="icon-title">
+              <span className="material-symbols-rounded">fact_check</span>Qualification (MEDDIC)
+            </div>
+            <div className="gate-grid">
+              {MEDDIC_KEYS.map(([k, label]) => {
+                const v = opp.meddic?.[k];
+                return (
+                  <div className={"gate " + (v ? "ok" : "")} key={k}>
+                    <span className="material-symbols-rounded g-ic">
+                      {v ? "check_circle" : "radio_button_unchecked"}
+                    </span>
+                    <div style={{ flex: 1 }}>
+                      <div className="g-title">{label}</div>
+                      <div className="g-sub">{v || "Not captured"}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="grid-2">
-        <SubList
-          title="Teaming partners"
-          resource="b2g-teaming-partners"
-          oppId={opp.id}
-          fields={[
-            { name: "company_name", label: "Company" },
-            { name: "role", label: "Role" },
-          ]}
-          render={(r) =>
-            `${r.company_name}${r.role ? ` — ${r.role}` : ""}`
-          }
-        />
-        <SubList
-          title="Government stakeholders"
-          resource="b2g-stakeholders"
-          oppId={opp.id}
-          fields={[
-            { name: "name", label: "Name" },
-            { name: "agency_role", label: "Role" },
-          ]}
-          render={(r) =>
-            `${r.name}${r.agency_role ? ` — ${r.agency_role}` : ""}`
-          }
-        />
-      </div>
+        {/* Right rail */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          <div className="panel">
+            <div className="icon-title">
+              <span className="material-symbols-rounded">event</span>Key dates
+            </div>
+            <div className="timeline">
+              <div className="tl-item">
+                <div className="tl-rail">
+                  <span className={"tl-dot" + (curIdx >= 0 ? " done" : "")} />
+                  <span className="tl-line" />
+                </div>
+                <div style={{ paddingBottom: 14 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>Capture stage</div>
+                  <div className="muted" style={{ fontSize: 12 }}>
+                    {opp.capture_stage ?? "—"}
+                  </div>
+                </div>
+              </div>
+              <div className="tl-item">
+                <div className="tl-rail">
+                  <span className="tl-dot now" />
+                </div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "var(--accent-strong)" }}>
+                    Response due
+                  </div>
+                  <div className="muted" style={{ fontSize: 12 }}>
+                    {opp.due_date ? opp.due_date.slice(0, 10) : "—"}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-      <SubList
-        title="Compliance & security gates"
-        resource="b2g-compliance-gates"
-        oppId={opp.id}
-        fields={[
-          { name: "label", label: "Gate" },
-          { name: "status", label: "Status" },
-        ]}
-        render={(r) => `${r.label} — ${r.status ?? "pending"}`}
-      />
+          <div className="panel">
+            <div className="icon-title">
+              <span className="material-symbols-rounded">account_balance</span>Government stakeholders
+            </div>
+            {stakeholders.map((s) => (
+              <div className="stakeholder-row" key={s.id as string}>
+                <span className="avatar-sm" style={{ background: avatarColor(String(s.name)) }}>
+                  {initials(String(s.name))}
+                </span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 600 }}>{String(s.name)}</div>
+                  <div className="muted" style={{ fontSize: 12 }}>
+                    {[s.agency_role, s.disposition].filter(Boolean).join(" · ")}
+                  </div>
+                </div>
+              </div>
+            ))}
+            {stakeholders.length === 0 && <p className="muted">No stakeholders yet.</p>}
+            <AddRow
+              resource="b2g-stakeholders"
+              oppId={opp.id}
+              fields={[
+                { name: "name", label: "Name" },
+                { name: "agency_role", label: "Role" },
+              ]}
+              onAdded={loadSubs}
+            />
+          </div>
+
+          {nextStage && (
+            <button className="big-btn" onClick={() => setStage(nextStage)}>
+              <span className="material-symbols-rounded">rocket_launch</span>
+              Advance to {nextStage}
+            </button>
+          )}
+        </div>
+      </div>
     </>
   );
 }
