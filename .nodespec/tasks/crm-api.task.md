@@ -516,3 +516,22 @@ Startup/initialization order based on edge directions and interaction patterns.
 | `.nodespec/tests/req-005-b2b-lead-status-follow-up-workflow.tests.md` - Test plan for requirement: B2B Lead Status & Follow-up Workflow | test-plan | markdown | draft |
 | `.nodespec/tests/req-013-unified-dashboard-cross-module-summary.tests.md` - Test plan for requirement: Unified Dashboard & Cross-Module Summary | test-plan | markdown | draft |
 | `.nodespec/tests/req-002-role-based-access-control.tests.md` - Test plan for requirement: Role-Based Access Control | test-plan | markdown | draft |
+
+## Design Expansion (REQ-019–025) — new endpoints & aggregations
+
+New API surface added under `/api/v1`, reusing the generic `makeCrudRouter` factory where possible:
+
+- **companies** (REQ-020), **contacts** (REQ-019), **activities** + **tasks** (REQ-024): standard
+  CRUD via `makeCrudRouter` with per-module `columns`, `searchable`, and (contacts) `tags` array +
+  `custom_fields` JSONB passthrough.
+- **b2b-leads**: extended columns `amount, close_date, owner_id, company_id, contact_id` (REQ-021).
+- **deals aggregation**: `/dashboard` gains open pipeline value + won revenue from real deal amounts;
+  a pipeline/Kanban grouping (deals by `lead_statuses` stage) is exposed for the board view.
+- **b2g capture** (REQ-022): opportunity gains capture columns + `meddic` JSONB; sub-resources for
+  teaming partners, stakeholders, and compliance gates (nested routes or JSONB).
+- **custom-field-defs** (REQ-023): admin-only CRUD (`writeRole: 'admin'`); the generic router
+  accepts/returns each record's `custom_fields` JSONB.
+- **/meta** extended with owners (users), lifecycle stages, and active custom-field definitions so the
+  frontend renders dynamic selects/fields.
+- RBAC: custom-field-defs and pipeline-stage management are Admin-only; role re-read per request
+  already applies (REQ-002).

@@ -302,3 +302,23 @@ Startup/initialization order based on edge directions and interaction patterns.
 | File | Kind | Language | Status |
 |------|------|----------|--------|
 | `.nodespec/tests/req-016-api-first-backend-design.tests.md` - Test plan for requirement: API-First Backend Design | test-plan | markdown | draft |
+
+## Design Expansion (REQ-019–025) — new screens
+
+Implements the expanded Claude Design (Contacts, B2G Federal Capture, Company 360, Deals/Kanban),
+reusing the existing shell (`Sidebar`/`Topbar`/`theme`), `modules.ts`, `ResourcePage`, `FilterBar`,
+and `CalendarMonth`:
+
+- **Free modules** (via `modules.ts` + `ResourcePage`): Companies, Contacts, Activities, Tasks —
+  list/filter/CSV/create for each (REQ-019/020/024).
+- **Bespoke views:**
+  - `DealsKanban` — pipeline board, column per stage, card shows deal + amount (REQ-021).
+  - `Company360` — company header with integrated Contacts / Deals / Activity (REQ-020).
+  - `ContactDetail` — profile + linked company/deals/activity (REQ-019).
+  - `B2GCaptureView` + `CaptureStepper` — MEDDIC, teaming, stakeholders, compliance gates, key dates,
+    acquisition details (REQ-022; ports the design's `stepper.js` behavior).
+  - `ActivityTimeline` + `TasksPanel` (REQ-024).
+  - `CustomFieldsAdmin` drawer + a `CustomFields` renderer used by `ResourcePage` forms (REQ-023).
+  - **Dashboard** widgets: pipeline value / won revenue (deal amounts), activity feed, tasks due.
+- **Responsive/mobile** (REQ-025): sidebar → drawer/bottom-nav under breakpoints; tables → stacked
+  cards; Company 360 / capture views reflow. No fabricated data; MRR omitted.
