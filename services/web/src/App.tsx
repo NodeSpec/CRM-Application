@@ -8,6 +8,7 @@ import { EventsPage } from "./pages/EventsPage";
 import { DealsKanban } from "./pages/DealsKanban";
 import { Company360 } from "./pages/Company360";
 import { ContactDetail } from "./pages/ContactDetail";
+import { B2GCaptureView } from "./pages/B2GCaptureView";
 import { CategoriesAdmin } from "./pages/admin/CategoriesAdmin";
 import { UsersAdmin } from "./pages/admin/UsersAdmin";
 import { AuditAdmin } from "./pages/admin/AuditAdmin";
@@ -74,6 +75,10 @@ export default function App() {
             <Route path="/deals" element={<DealsKanban />} />
             <Route path="/companies/:id" element={<Company360 />} />
             <Route path="/contacts/:id" element={<ContactDetail />} />
+            <Route
+              path="/b2g-opportunities/:id"
+              element={<B2GCaptureView />}
+            />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/admin/categories" element={<CategoriesAdmin />} />
             <Route path="/admin/users" element={<UsersAdmin />} />

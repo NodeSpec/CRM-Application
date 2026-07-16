@@ -96,6 +96,7 @@ export const MODULES: Record<string, ModuleConfig> = {
     resource: "b2g-opportunities",
     description: "Track government opportunities and due dates (REQ-007/008).",
     searchable: true,
+    detailPath: "/b2g-opportunities",
     columns: [
       { key: "notice_id", label: "Notice ID" },
       { key: "agency_department", label: "Agency" },
