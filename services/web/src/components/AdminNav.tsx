@@ -14,6 +14,9 @@ export function AdminNav() {
       <NavLink to="/admin/users" className={cls}>
         Users &amp; Roles
       </NavLink>
+      <NavLink to="/admin/custom-fields" className={cls}>
+        Custom Fields
+      </NavLink>
       <NavLink to="/admin/audit" className={cls}>
         Audit Log
       </NavLink>

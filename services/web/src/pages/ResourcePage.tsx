@@ -57,10 +57,15 @@ export function ResourcePage({ config }: { config: ModuleConfig }) {
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<Record<string, string>>({});
+  const [cfForm, setCfForm] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
   const b2gDays = meta?.thresholds.b2g_due_date_threshold_days ?? 14;
   const subDays = meta?.thresholds.submission_deadline_threshold_days ?? 14;
+  // Active custom fields for this module (REQ-023); module name = table name.
+  const cfDefs = (meta?.custom_field_defs ?? []).filter(
+    (d) => d.module === resource.replace(/-/g, "_")
+  );
 
   // Re-initialize filters from the URL whenever the route or its query changes
   // (so dashboard KPI deep-links land pre-filtered). Waits for meta thresholds.
@@ -126,8 +131,17 @@ export function ResourcePage({ config }: { config: ModuleConfig }) {
         if (raw == null || raw === "") continue;
         payload[f.name] = f.type === "number" ? Number(raw) : raw;
       }
+      // Custom field values → custom_fields JSONB (REQ-023).
+      const cf: Record<string, unknown> = {};
+      for (const d of cfDefs) {
+        const v = cfForm[d.key];
+        if (v == null || v === "") continue;
+        cf[d.key] = d.type === "number" ? Number(v) : v;
+      }
+      if (Object.keys(cf).length) payload.custom_fields = cf;
       await api.create(resource, payload);
       setForm({});
+      setCfForm({});
       setShowForm(false);
       await load();
     } catch (e) {
@@ -248,6 +262,37 @@ export function ResourcePage({ config }: { config: ModuleConfig }) {
                 )}
               </label>
             ))}
+            {/* Admin-defined custom fields (REQ-023) */}
+            {cfDefs.map((d) => (
+              <label key={`cf-${d.key}`}>
+                <span>{d.label}</span>
+                {d.type === "select" ? (
+                  <select
+                    value={cfForm[d.key] ?? ""}
+                    onChange={(e) => setCfForm({ ...cfForm, [d.key]: e.target.value })}
+                  >
+                    <option value="">Select…</option>
+                    {d.options.map((o) => (
+                      <option key={o} value={o}>
+                        {o}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type={
+                      d.type === "number"
+                        ? "number"
+                        : d.type === "date"
+                          ? "date"
+                          : "text"
+                    }
+                    value={cfForm[d.key] ?? ""}
+                    onChange={(e) => setCfForm({ ...cfForm, [d.key]: e.target.value })}
+                  />
+                )}
+              </label>
+            ))}
           </div>
           <button className="btn btn-primary" type="submit" disabled={saving}>
             {saving ? "Saving…" : "Create"}
@@ -283,7 +328,7 @@ export function ResourcePage({ config }: { config: ModuleConfig }) {
               rows.map((row, i) => (
                 <tr key={(row.id as string) ?? i}>
                   {columns.map((c, ci) => (
-                    <td key={c.key}>
+                    <td key={c.key} data-label={c.label}>
                       {ci === 0 && config.detailPath && row.id ? (
                         <Link to={`${config.detailPath}/${row.id}`}>
                           {renderCell(row, c)}

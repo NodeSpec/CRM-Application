@@ -736,15 +736,112 @@ tbody tr:hover {
   border-color: transparent;
 }
 
-/* ---- Responsive --------------------------------------------------------- */
-@media (max-width: 900px) {
+/* ---- Responsive / mobile (REQ-025) ------------------------------------- */
+@media (max-width: 860px) {
+  /* Sidebar collapses to a horizontal, scrollable top nav. */
+  .app {
+    flex-direction: column;
+  }
+  .sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    width: 100%;
+    height: auto;
+    flex: none;
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+    overflow-x: auto;
+    padding: 8px 10px;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .sidebar-brand {
+    padding: 0 6px;
+  }
+  .brand-name {
+    display: none;
+  }
+  .sidebar-nav {
+    flex-direction: row;
+    gap: 4px;
+  }
+  .nav-item {
+    white-space: nowrap;
+    padding: 8px 10px;
+  }
+  .sidebar-user {
+    margin-top: 0;
+    margin-left: auto;
+  }
+  .su-name,
+  .su-role {
+    display: none;
+  }
+
+  .content {
+    padding: 16px 14px 32px;
+  }
   .kpi-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  .grid-2 {
+  .grid-2,
+  .stat-row {
     grid-template-columns: 1fr;
   }
-  .sidebar {
+  .form-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .filter-actions {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 520px) {
+  .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  /* Tables reflow to stacked cards — no page-level horizontal scroll. */
+  .table-wrap {
+    border: none;
+    background: transparent;
+  }
+  table thead {
     display: none;
+  }
+  table,
+  table tbody,
+  table tr,
+  table td {
+    display: block;
+    width: 100%;
+  }
+  table tr {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 10px;
+    padding: 6px 4px;
+  }
+  table td {
+    border: none;
+    padding: 6px 12px;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  table td::before {
+    content: attr(data-label);
+    color: var(--text-3);
+    font-weight: 600;
+    font-size: 12px;
   }
 }

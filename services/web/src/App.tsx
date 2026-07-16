@@ -12,6 +12,7 @@ import { B2GCaptureView } from "./pages/B2GCaptureView";
 import { CategoriesAdmin } from "./pages/admin/CategoriesAdmin";
 import { UsersAdmin } from "./pages/admin/UsersAdmin";
 import { AuditAdmin } from "./pages/admin/AuditAdmin";
+import { CustomFieldsAdmin } from "./pages/admin/CustomFieldsAdmin";
 import { MODULES } from "./modules";
 import { useAuth } from "./auth/AuthContext";
 
@@ -83,6 +84,7 @@ export default function App() {
             <Route path="/admin/categories" element={<CategoriesAdmin />} />
             <Route path="/admin/users" element={<UsersAdmin />} />
             <Route path="/admin/audit" element={<AuditAdmin />} />
+            <Route path="/admin/custom-fields" element={<CustomFieldsAdmin />} />
             <Route
               path="*"
               element={

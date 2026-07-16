@@ -79,9 +79,16 @@ Any step above that mentions an admin console, a certificate, or "your developer
 > component specs in `.nodespec/` and `ARCHITECTURE.md`. It is **functional**:
 > deploy it, log in via Keycloak, and use it. Implemented: backend-for-frontend
 > OIDC login, server-side sessions, RBAC, database migrations, DB-backed CRUD
-> for all five modules, a redesigned dashboard with light/dark theme, advanced
-> per-module filtering + CSV export, B2G/submission due-date badges, an events
-> calendar view, and admin panels (submission categories, user roles, audit log).
+> for all modules, a redesigned dashboard with light/dark theme, advanced
+> per-module filtering + CSV export, due-date badges, an events calendar view,
+> and admin panels (submission categories, user roles, audit log, custom fields).
+>
+> **Design-expansion modules (REQ-019–025):** Companies + Account 360, Contacts
+> (with detail views), a Deal Pipeline **Kanban** with revenue rollups, **B2G
+> Federal Capture** (MEDDIC, teaming, stakeholders, compliance gates, capture
+> stepper), Activities & Tasks, admin-defined **custom fields** per module, and
+> a **responsive/mobile** layout. No fabricated metrics — revenue is computed
+> from real deal amounts; MRR is intentionally omitted.
 
 ## Run the whole stack
 
