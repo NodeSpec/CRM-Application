@@ -67,11 +67,25 @@ var PUBLICITY_FORMATS = ['Podcast', 'Newsletter', 'Blog', 'Print', 'TV'];
 var THRESHOLDS = { b2g_due_date_threshold_days: 14, submission_deadline_threshold_days: 14 };
 
 // ---- Web app entry ---------------------------------------------------------
-function doGet() {
-  return HtmlService.createHtmlOutputFromFile('Index')
+function doGet(e) {
+  var page = (e && e.parameter && e.parameter.page) || '';
+  var file = page === 'diag' ? 'Diag' : 'Index';
+  return HtmlService.createHtmlOutputFromFile(file)
     .setTitle('CRM Platform — Sheets demo')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+// Minimal round-trip probe for the diagnostic page — proves google.script.run
+// reaches the server and the spreadsheet is bound.
+function ping() {
+  var s = SpreadsheetApp.getActiveSpreadsheet();
+  return {
+    ok: true,
+    time: new Date().toISOString(),
+    spreadsheet: s ? s.getName() : null,
+    tabs: s ? s.getSheets().map(function (sh) { return sh.getName(); }) : []
+  };
 }
 
 // ---- API dispatcher (called from the frontend via google.script.run) -------
