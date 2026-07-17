@@ -12,6 +12,7 @@ import { auditRouter } from "../modules/audit/index.js";
 import { metaRouter } from "../modules/meta/index.js";
 import { usersRouter } from "../modules/users/index.js";
 import { companiesRouter } from "../modules/companies/index.js";
+import { companySocialRouter } from "../modules/social/index.js";
 import { contactsRouter } from "../modules/contacts/index.js";
 import { contactLifecycleStagesRouter } from "../modules/contact-lifecycle-stages/index.js";
 import { activitiesRouter } from "../modules/activities/index.js";
@@ -51,6 +52,9 @@ v1Router.use("/meta", metaRouter);
 v1Router.use("/users", usersRouter);
 
 // Design-expansion modules (REQ-019–024)
+// Social feed sub-route is mounted first so /companies/:id/social-feed resolves
+// before the generic CRUD :id handler (REQ-026).
+v1Router.use("/companies", companySocialRouter);
 v1Router.use("/companies", companiesRouter);
 v1Router.use("/contacts", contactsRouter);
 v1Router.use("/contact-lifecycle-stages", contactLifecycleStagesRouter);

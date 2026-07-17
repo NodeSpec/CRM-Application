@@ -1497,6 +1497,31 @@ tbody tr:hover {
   font-size: 9px;
   font-weight: 800;
 }
+a.social-tab {
+  text-decoration: none;
+  cursor: pointer;
+}
+a.social-tab.on {
+  color: var(--accent-strong);
+}
+.social-input {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.social-input input {
+  flex: 1;
+  min-width: 0;
+}
+.channel-status {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
 
 /* ---- Milestone timeline (3A) ------------------------------------------- */
 .ms-item {

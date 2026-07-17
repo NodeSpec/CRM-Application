@@ -9,6 +9,12 @@ import { Star, DataLegend } from "../components/NeedsData";
  * header + rollup metrics, integrated Deals + People + About, and (in place of
  * the mockup's social feed) our real activity timeline with a Log-activity action.
  */
+interface SocialLinks {
+  linkedin?: string;
+  x?: string;
+  instagram?: string;
+  tiktok?: string;
+}
 interface Company {
   id: string;
   name: string;
@@ -17,7 +23,33 @@ interface Company {
   segment?: string;
   about?: string;
   owner_id?: string;
+  social_links?: SocialLinks;
 }
+type Platform = "linkedin" | "x" | "instagram" | "tiktok";
+interface SocialPost {
+  id: string;
+  text: string;
+  posted_at: string;
+  url?: string;
+  likes?: number;
+  comments?: number;
+  shares?: number;
+}
+interface ChannelFeed {
+  platform: Platform;
+  connected: boolean;
+  url?: string;
+  configured: boolean;
+  posts: SocialPost[];
+  reason: string | null;
+}
+/** Platform display metadata (label + badge glyph/color) for the social pane. */
+const PLATFORMS: { key: Platform; label: string; glyph: string; bg: string }[] = [
+  { key: "linkedin", label: "LinkedIn", glyph: "in", bg: "#0a66c2" },
+  { key: "x", label: "X", glyph: "X", bg: "#111" },
+  { key: "instagram", label: "Instagram", glyph: "IG", bg: "linear-gradient(135deg,#f58529,#dd2a7b,#8134af)" },
+  { key: "tiktok", label: "TikTok", glyph: "TT", bg: "#010101" },
+];
 interface Lead {
   id: string;
   company_name: string;
@@ -66,6 +98,10 @@ export function Company360() {
   const [error, setError] = useState<string | null>(null);
   const [logging, setLogging] = useState(false);
   const [note, setNote] = useState("");
+  const [feed, setFeed] = useState<{ channels: ChannelFeed[]; live: boolean } | null>(null);
+  const [editSocial, setEditSocial] = useState(false);
+  const [socialForm, setSocialForm] = useState<SocialLinks>({});
+  const [savingSocial, setSavingSocial] = useState(false);
 
   const loadActs = useCallback(() => {
     if (!id) return;
@@ -75,13 +111,28 @@ export function Company360() {
       .catch(() => {});
   }, [id]);
 
+  const loadFeed = useCallback(() => {
+    if (!id) return;
+    api
+      .object<{ channels: ChannelFeed[]; live: boolean }>(`companies/${id}/social-feed`)
+      .then(setFeed)
+      .catch(() => {});
+  }, [id]);
+
   useEffect(() => {
     if (!id) return;
-    api.get<Company>("companies", id).then(setCompany).catch((e) => setError((e as Error).message));
+    api
+      .get<Company>("companies", id)
+      .then((c) => {
+        setCompany(c);
+        setSocialForm(c.social_links ?? {});
+      })
+      .catch((e) => setError((e as Error).message));
     api.list<Lead>("b2b-leads", { company_id: id }).then(setDeals).catch(() => {});
     api.list<Contact>("contacts", { company_id: id }).then(setContacts).catch(() => {});
     loadActs();
-  }, [id, loadActs]);
+    loadFeed();
+  }, [id, loadActs, loadFeed]);
 
   const ownerName = (oid?: string | null) =>
     meta?.owners.find((o) => o.id === oid)?.display_name ?? "";
@@ -112,6 +163,33 @@ export function Company360() {
       setError((err as Error).message);
     }
   }
+
+  async function saveSocial() {
+    if (!company || !id) return;
+    setSavingSocial(true);
+    try {
+      // Trim + drop empties so cleared fields are removed from the JSON blob.
+      const cleaned: SocialLinks = {};
+      (Object.keys(socialForm) as Platform[]).forEach((k) => {
+        const v = (socialForm[k] ?? "").trim();
+        if (v) cleaned[k] = v;
+      });
+      await api.update("companies", id, { name: company.name, social_links: cleaned });
+      setCompany({ ...company, social_links: cleaned });
+      setEditSocial(false);
+      loadFeed();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSavingSocial(false);
+    }
+  }
+
+  const channelsByKey = new Map((feed?.channels ?? []).map((c) => [c.platform, c]));
+  const connectedPlatforms = PLATFORMS.filter((p) => (company.social_links ?? {})[p.key]);
+  const allPosts = (feed?.channels ?? []).flatMap((c) =>
+    c.posts.map((post) => ({ ...post, platform: c.platform }))
+  );
 
   return (
     <>
@@ -247,28 +325,146 @@ export function Company360() {
           </div>
         </div>
 
-        {/* Right: social activity (design 4A — not backed) + real activity timeline */}
+        {/* Right: social activity (design 4A) — real links + provider feed seam */}
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
           <div className="panel">
             <div className="panel-head">
               <div className="icon-title" style={{ marginBottom: 0 }}>
                 <span className="material-symbols-rounded">rss_feed</span>Social activity
-                <Star note="No social-media integration — needs LinkedIn/X/Instagram connectors" />
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {feed && (
+                  <span
+                    className="sync-chip"
+                    style={
+                      feed.live
+                        ? { background: "var(--pos-soft)", color: "var(--pos)" }
+                        : undefined
+                    }
+                  >
+                    <span className="material-symbols-rounded">{feed.live ? "sync" : "sync_disabled"}</span>
+                    {feed.live ? "Auto-synced" : "Links only"}
+                  </span>
+                )}
+                <button
+                  className="icon-btn"
+                  style={{ width: 30, height: 30 }}
+                  title="Edit social links"
+                  onClick={() => {
+                    setSocialForm(company.social_links ?? {});
+                    setEditSocial((v) => !v);
+                  }}
+                >
+                  <span className="material-symbols-rounded" style={{ fontSize: 18 }}>
+                    {editSocial ? "close" : "edit"}
+                  </span>
+                </button>
               </div>
             </div>
-            <div className="muted" style={{ fontSize: 12.5, marginBottom: 6 }}>
+            <div className="muted" style={{ fontSize: 12.5, marginBottom: 12 }}>
               Track what {company.name} posts across channels.
             </div>
-            <div className="social-tabs">
-              <span className="social-tab on">All</span>
-              <span className="social-tab"><span className="pf-badge" style={{ background: "#0a66c2" }}>in</span>LinkedIn</span>
-              <span className="social-tab"><span className="pf-badge" style={{ background: "#111" }}>X</span></span>
-              <span className="social-tab"><span className="pf-badge" style={{ background: "linear-gradient(135deg,#f58529,#dd2a7b,#8134af)" }}><span className="material-symbols-rounded" style={{ fontSize: 11 }}>photo_camera</span></span></span>
-            </div>
-            <div className="nd-empty">
-              <span className="material-symbols-rounded">link</span>
-              <div>No channels connected yet.<br />Social posts appear here once an account is linked.</div>
-            </div>
+
+            {editSocial ? (
+              /* Link editor */
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {PLATFORMS.map((p) => (
+                  <label key={p.key} className="social-input">
+                    <span className="pf-badge" style={{ background: p.bg }}>{p.glyph}</span>
+                    <input
+                      type="url"
+                      placeholder={`${p.label} profile URL`}
+                      value={socialForm[p.key] ?? ""}
+                      onChange={(e) => setSocialForm({ ...socialForm, [p.key]: e.target.value })}
+                    />
+                  </label>
+                ))}
+                <div style={{ display: "flex", gap: 8, marginTop: 2 }}>
+                  <button className="btn btn-primary" onClick={saveSocial} disabled={savingSocial}>
+                    {savingSocial ? "Saving…" : "Save links"}
+                  </button>
+                  <button className="btn" onClick={() => setEditSocial(false)}>Cancel</button>
+                </div>
+                <div className="sync-note" style={{ marginTop: 4 }}>
+                  <span className="material-symbols-rounded" style={{ fontSize: 18, color: "var(--accent-strong)" }}>hub</span>
+                  <span>
+                    Links are saved to the company. Live posts render once a platform
+                    API credential is connected through the egress gateway (REQ-026).
+                  </span>
+                </div>
+              </div>
+            ) : connectedPlatforms.length === 0 ? (
+              <div className="nd-empty">
+                <span className="material-symbols-rounded">link</span>
+                <div>
+                  No channels linked yet.<br />
+                  Use <b>Edit</b> to add LinkedIn, X, Instagram or TikTok profiles.
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Connected channel chips (link out to the real profile) */}
+                <div className="social-tabs">
+                  {connectedPlatforms.map((p) => (
+                    <a
+                      key={p.key}
+                      className="social-tab on"
+                      href={(company.social_links ?? {})[p.key]}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      title={`Open ${p.label} profile`}
+                    >
+                      <span className="pf-badge" style={{ background: p.bg }}>{p.glyph}</span>
+                      {p.label}
+                      <span className="material-symbols-rounded" style={{ fontSize: 13 }}>open_in_new</span>
+                    </a>
+                  ))}
+                </div>
+
+                {/* Posts if a provider returned them; else honest per-channel state */}
+                {allPosts.length > 0 ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    {allPosts.map((post) => {
+                      const pm = PLATFORMS.find((p) => p.key === post.platform)!;
+                      return (
+                        <div className="feed-card" key={post.id}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 6 }}>
+                            <span className="pf-badge" style={{ background: pm.bg }}>{pm.glyph}</span>
+                            <span style={{ fontSize: 12.5, fontWeight: 700, flex: 1 }}>{pm.label}</span>
+                            <span className="muted" style={{ fontSize: 11.5 }}>{post.posted_at.slice(0, 10)}</span>
+                          </div>
+                          <div style={{ fontSize: 13, lineHeight: 1.5 }}>{post.text}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="nd-empty" style={{ textAlign: "left", alignItems: "stretch", gap: 10 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center" }}>
+                      <span className="material-symbols-rounded">cloud_off</span>
+                      <b>Live feed not connected</b>
+                    </div>
+                    <div style={{ fontSize: 12.5 }}>
+                      Profiles are linked, but pulling posts needs each platform's
+                      official API connected through the egress gateway. Until then,
+                      open a channel above to view its posts directly.
+                    </div>
+                    {connectedPlatforms.map((p) => {
+                      const ch = channelsByKey.get(p.key);
+                      return (
+                        <div key={p.key} className="channel-status">
+                          <span className="pf-badge" style={{ background: p.bg }}>{p.glyph}</span>
+                          <span style={{ flex: 1, fontSize: 12.5, fontWeight: 600 }}>{p.label}</span>
+                          <span className="muted" style={{ fontSize: 11.5 }}>
+                            {ch?.configured ? ch?.reason ?? "Connected" : "API not connected"}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            )}
           </div>
 
           <div className="panel">

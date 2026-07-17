@@ -262,3 +262,10 @@ preserved:
 - Configurable **lifecycle stages** reuse/extend the `lead_statuses` pattern.
 
 No recurring-revenue (MRR) columns are introduced — only one-time deal `amount` (REQ-021).
+
+## Design Expansion (REQ-026) — Company social links
+
+- Migration `0019_company_social_links`: adds `companies.social_links JSONB NOT NULL
+  DEFAULT '{}'`, holding official profile URLs keyed by platform
+  (`linkedin`/`x`/`instagram`/`tiktok`). Down migration drops the column. No live
+  post data is stored — only the profile links the user enters.

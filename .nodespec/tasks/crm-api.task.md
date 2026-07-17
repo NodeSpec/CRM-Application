@@ -535,3 +535,40 @@ New API surface added under `/api/v1`, reusing the generic `makeCrudRouter` fact
   frontend renders dynamic selects/fields.
 - RBAC: custom-field-defs and pipeline-stage management are Admin-only; role re-read per request
   already applies (REQ-002).
+
+## Design Expansion (REQ-026) — Social profile integration & egress gateway
+
+Company 360 (design 4A) lets a user store a company's official social profile URLs
+(LinkedIn / X / Instagram / TikTok) and surfaces a Social activity feed.
+
+- **Data**: `companies.social_links JSONB` (migration `0019`), keyed by platform.
+  Exposed through the companies `makeCrudRouter` (`social_links` in `columns` +
+  `jsonColumns`, validated by `socialLinksSchema`).
+- **Feed endpoint**: `GET /api/v1/companies/:id/social-feed` (mounted before the
+  companies CRUD router so the sub-route resolves first). Returns one `ChannelFeed`
+  per platform: `{ connected, url, configured, posts, reason }` plus a top-level
+  `live` flag.
+- **Provider seam** (`modules/social`): one `SocialProvider` per platform behind a
+  `GatewayProvider`. A provider only returns posts when its API credential is
+  present **and** the outbound call (to be implemented at the single documented
+  seam) succeeds. No credential ⇒ `configured:false`, empty `posts`, honest
+  `reason` — the API never fabricates social posts.
+
+### Architecture requirement — API gateway + egress/ingress (avoid tech debt)
+
+Third-party/social integrations MUST NOT call external hosts directly from app
+code. To keep this from becoming technical debt as more integrations are added:
+
+- **Egress gateway** (outbound): all calls to social/third-party APIs route through
+  a dedicated egress gateway (`SOCIAL_EGRESS_BASE_URL`) that owns the host
+  allowlist, per-provider credential injection (`SOCIAL_*_TOKEN`), rate limiting,
+  timeouts/retries, and centralized logging. App code holds no third-party secrets
+  and hardcodes no third-party hostnames.
+- **Ingress** (inbound): any platform webhooks (e.g. post notifications) enter
+  through the reverse-proxy ingress with signature verification, not ad-hoc
+  listeners.
+- **Failure posture**: a missing credential or a gateway/policy denial degrades to
+  an honest "not connected" state; it never invents data.
+
+Config: `SOCIAL_EGRESS_BASE_URL`, `SOCIAL_LINKEDIN_TOKEN`, `SOCIAL_X_TOKEN`,
+`SOCIAL_INSTAGRAM_TOKEN`, `SOCIAL_TIKTOK_TOKEN` (all optional; see `.env.example`).

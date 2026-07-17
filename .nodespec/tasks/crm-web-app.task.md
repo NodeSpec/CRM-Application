@@ -322,3 +322,12 @@ and `CalendarMonth`:
   - **Dashboard** widgets: pipeline value / won revenue (deal amounts), activity feed, tasks due.
 - **Responsive/mobile** (REQ-025): sidebar → drawer/bottom-nav under breakpoints; tables → stacked
   cards; Company 360 / capture views reflow. No fabricated data; MRR omitted.
+
+## Design Expansion (REQ-026) — Company 360 social activity
+
+- Company 360 (design 4A) has an editable Social links panel: the user inputs
+  LinkedIn / X / Instagram / TikTok profile URLs, saved to `companies.social_links`.
+- Connected platforms render as clickable channel chips (open the real profile).
+- The activity feed calls `GET /companies/:id/social-feed`; it renders returned
+  posts, or an honest "live feed not connected — connect a platform API through the
+  egress gateway" state per channel. The UI never shows fabricated posts.

@@ -36,6 +36,19 @@ component inventory, connection topology, and links to per-component task docume
 | CRM API | Session Store | sql | Session & Revocation Store |
 | CRM Web App | Reverse Proxy | rest | Browser HTTPS |
 | CRM API | CRM Database | sql | CRM Persistence |
+| CRM API | Egress Gateway | rest | Outbound 3rd-party/social APIs (REQ-026) |
+| Egress Gateway | Social Platform APIs | rest | LinkedIn/X/Instagram/TikTok (allowlisted) |
+
+### Integration egress/ingress (REQ-026)
+
+Outbound calls to third-party/social platforms route through a dedicated **egress
+gateway** — not directly from application code. The gateway owns the host
+allowlist, per-provider credential injection (`SOCIAL_*_TOKEN`), rate limiting, and
+centralized logging (`SOCIAL_EGRESS_BASE_URL`). Inbound platform webhooks, if used,
+enter via the reverse-proxy **ingress** with signature verification. This keeps
+third-party secrets and hostnames out of app code and prevents integration sprawl
+from becoming technical debt. Absent credentials or a policy denial degrade to an
+honest "not connected" state; no data is fabricated.
 
 ## Task Documents
 
