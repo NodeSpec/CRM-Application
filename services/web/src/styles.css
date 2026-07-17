@@ -1259,6 +1259,44 @@ tbody tr:hover {
   height: 9px;
   border-radius: 50%;
 }
+.stage-edit {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 500;
+  padding: 4px 6px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text);
+}
+.stage-edit:hover {
+  border-color: var(--border);
+}
+.stage-edit:focus {
+  border-color: var(--accent);
+  background: var(--surface);
+  outline: none;
+}
+.stage-del {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  color: var(--text-3);
+}
+.stage-del:hover {
+  color: var(--neg);
+  background: var(--neg-soft);
+}
+.stage-add {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+.stage-add input {
+  flex: 1;
+  min-width: 0;
+}
 .switch {
   width: 34px;
   height: 20px;

@@ -13,6 +13,7 @@ import { metaRouter } from "../modules/meta/index.js";
 import { usersRouter } from "../modules/users/index.js";
 import { companiesRouter } from "../modules/companies/index.js";
 import { contactsRouter } from "../modules/contacts/index.js";
+import { contactLifecycleStagesRouter } from "../modules/contact-lifecycle-stages/index.js";
 import { activitiesRouter } from "../modules/activities/index.js";
 import { tasksRouter } from "../modules/tasks/index.js";
 import { customFieldDefsRouter } from "../modules/custom-field-defs/index.js";
@@ -52,6 +53,7 @@ v1Router.use("/users", usersRouter);
 // Design-expansion modules (REQ-019–024)
 v1Router.use("/companies", companiesRouter);
 v1Router.use("/contacts", contactsRouter);
+v1Router.use("/contact-lifecycle-stages", contactLifecycleStagesRouter);
 v1Router.use("/activities", activitiesRouter);
 v1Router.use("/tasks", tasksRouter);
 v1Router.use("/custom-field-defs", customFieldDefsRouter);

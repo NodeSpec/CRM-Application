@@ -32,6 +32,12 @@ interface FieldDef {
   options: string[];
   is_active: boolean;
 }
+interface Stage {
+  id: string;
+  label: string;
+  sort_order: number;
+  is_active: boolean;
+}
 
 const AV = ["#6d5ef0", "#0ea5a3", "#e0682f", "#2563eb", "#12a150", "#a855f7"];
 const STAGE_DOT = ["var(--text-3)", "var(--info)", "var(--accent)", "var(--warn)", "var(--pos)", "#a855f7", "#0ea5a3"];
@@ -45,6 +51,9 @@ export function ContactsPage() {
   const [rows, setRows] = useState<Contact[]>([]);
   const [companies, setCompanies] = useState<Record<string, string>>({});
   const [defs, setDefs] = useState<FieldDef[]>([]);
+  const [stages, setStages] = useState<Stage[]>([]);
+  const [stageEdits, setStageEdits] = useState<Record<string, string>>({});
+  const [newStage, setNewStage] = useState("");
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -60,6 +69,14 @@ export function ContactsPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const loadStages = useCallback(() => {
+    api
+      .list<Stage>("contact-lifecycle-stages")
+      .then((s) => setStages(s))
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     api.list<Company>("companies").then((cs) => {
       const m: Record<string, string> = {};
@@ -67,7 +84,14 @@ export function ContactsPage() {
       setCompanies(m);
     }).catch(() => {});
     api.list<FieldDef>("custom-field-defs").then((d) => setDefs(d.filter((x) => x.module === "contacts"))).catch(() => {});
-  }, []);
+    loadStages();
+  }, [loadStages]);
+
+  // Live active stages drive the filter + create-form selects (falling back to
+  // /meta before the dedicated list has loaded), so admin edits show at once.
+  const activeStages: string[] = stages.length
+    ? stages.filter((s) => s.is_active).map((s) => s.label)
+    : meta?.contact_lifecycle_stages ?? [];
 
   const ownerName = (id?: string | null) => meta?.owners.find((o) => o.id === id)?.display_name ?? "";
   const stageColor = (label?: string | null) => {
@@ -115,6 +139,60 @@ export function ContactsPage() {
     }
   }
 
+  async function addStage() {
+    const label = newStage.trim();
+    if (!label) return;
+    try {
+      const nextOrder = stages.reduce((m, s) => Math.max(m, s.sort_order), 0) + 1;
+      await api.create("contact-lifecycle-stages", { label, sort_order: nextOrder });
+      setNewStage("");
+      loadStages();
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+  async function renameStage(s: Stage) {
+    const label = stageEdits[s.id]?.trim();
+    if (!label || label === s.label) return;
+    try {
+      await api.update("contact-lifecycle-stages", s.id, {
+        label,
+        sort_order: s.sort_order,
+        is_active: s.is_active,
+      });
+      setStageEdits((e) => {
+        const n = { ...e };
+        delete n[s.id];
+        return n;
+      });
+      loadStages();
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+  async function toggleStage(s: Stage) {
+    try {
+      await api.update("contact-lifecycle-stages", s.id, {
+        label: s.label,
+        sort_order: s.sort_order,
+        is_active: !s.is_active,
+      });
+      loadStages();
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+  async function deleteStage(s: Stage) {
+    if (!window.confirm(`Delete the "${s.label}" stage? Existing contacts keep their value.`))
+      return;
+    try {
+      await api.remove("contact-lifecycle-stages", s.id);
+      loadStages();
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
   return (
     <div className="with-drawer">
       <div className="grow">
@@ -154,7 +232,7 @@ export function ContactsPage() {
             <span>Stage</span>
             <select value={filters.lifecycle_stage ?? ""} onChange={(e) => setF("lifecycle_stage", e.target.value)}>
               <option value="">All</option>
-              {(meta?.contact_lifecycle_stages ?? []).map((s) => (
+              {activeStages.map((s) => (
                 <option key={s} value={s}>{s}</option>
               ))}
             </select>
@@ -188,7 +266,7 @@ export function ContactsPage() {
               <label><span>Lifecycle</span>
                 <select value={form.lifecycle_stage ?? ""} onChange={(e) => setForm({ ...form, lifecycle_stage: e.target.value })}>
                   <option value="">—</option>
-                  {(meta?.contact_lifecycle_stages ?? []).map((s) => <option key={s} value={s}>{s}</option>)}
+                  {activeStages.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
               </label>
               <label><span>Owner</span>
@@ -289,12 +367,55 @@ export function ContactsPage() {
           <div className="drawer-body">
             <div>
               <div className="drawer-label">Lifecycle stages</div>
-              {(meta?.contact_lifecycle_stages ?? []).map((s, i) => (
-                <div className="stage-item" key={s}>
+              {stages.length === 0 && (
+                <p className="muted" style={{ fontSize: 12.5 }}>No stages yet.</p>
+              )}
+              {stages.map((s, i) => (
+                <div
+                  className="stage-item"
+                  key={s.id}
+                  style={s.is_active ? undefined : { opacity: 0.55 }}
+                >
+                  <span className="material-symbols-rounded" style={{ fontSize: 18, color: "var(--text-3)", cursor: "grab" }}>drag_indicator</span>
                   <span className="dot" style={{ background: STAGE_DOT[i % STAGE_DOT.length] }} />
-                  <span style={{ fontSize: 13.5, fontWeight: 500, flex: 1 }}>{s}</span>
+                  <input
+                    className="stage-edit"
+                    value={stageEdits[s.id] ?? s.label}
+                    onChange={(e) => setStageEdits((es) => ({ ...es, [s.id]: e.target.value }))}
+                    onBlur={() => renameStage(s)}
+                    onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+                    aria-label={`Rename ${s.label}`}
+                  />
+                  <button
+                    className={"switch " + (s.is_active ? "on" : "off")}
+                    onClick={() => toggleStage(s)}
+                    title={s.is_active ? "Active — click to deactivate" : "Inactive — click to activate"}
+                    aria-label="toggle active"
+                  >
+                    <span className="knob" />
+                  </button>
+                  <button
+                    className="icon-btn stage-del"
+                    onClick={() => deleteStage(s)}
+                    title="Delete stage"
+                    aria-label={`Delete ${s.label}`}
+                  >
+                    <span className="material-symbols-rounded" style={{ fontSize: 17 }}>delete</span>
+                  </button>
                 </div>
               ))}
+              <div className="stage-add">
+                <input
+                  value={newStage}
+                  placeholder="New stage…"
+                  onChange={(e) => setNewStage(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && addStage()}
+                />
+                <button className="dashed-btn" style={{ width: "auto", flex: "0 0 auto", padding: "9px 12px" }} onClick={addStage}>
+                  <span className="material-symbols-rounded" style={{ fontSize: 17 }}>add</span>
+                  Add stage
+                </button>
+              </div>
             </div>
             <div>
               <div className="drawer-label">Custom fields</div>

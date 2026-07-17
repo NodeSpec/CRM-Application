@@ -35,6 +35,9 @@ export interface CrudOptions {
   jsonColumns?: string[];
   /** Whether the table has an `updated_at` column (default true). */
   hasUpdatedAt?: boolean;
+  /** ORDER BY clause for the list endpoint (default "created_at DESC"). Use
+   *  e.g. "sort_order, label" for config tables without a created_at column. */
+  orderBy?: string;
   /** Role required to create/update (defaults to any authenticated user). */
   writeRole?: Role;
   /** Role required to delete (defaults to any authenticated user). */
@@ -62,6 +65,7 @@ export function makeCrudRouter(opts: CrudOptions): Router {
   const ownerCol =
     opts.trackOwner === false ? null : (opts.ownerColumn ?? "created_by");
   const hasUpdatedAt = opts.hasUpdatedAt !== false;
+  const orderBy = opts.orderBy ?? "created_at DESC";
 
   // JSON-encode values bound to JSONB columns; pass everything else through
   // (node-postgres handles arrays -> Postgres array literals natively).
@@ -122,7 +126,7 @@ export function makeCrudRouter(opts: CrudOptions): Router {
       const offset = Number(req.query.offset) || 0;
       const clause = where.length ? `WHERE ${where.join(" AND ")}` : "";
       const { rows } = await pool.query(
-        `SELECT * FROM ${table} ${clause} ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`,
+        `SELECT * FROM ${table} ${clause} ORDER BY ${orderBy} LIMIT ${limit} OFFSET ${offset}`,
         params
       );
       res.json(rows);
