@@ -43,14 +43,16 @@ export const stakeholdersRouter = makeCrudRouter({
 const gateSchema = z.object({
   opportunity_id: z.string().uuid(),
   label: z.string().min(1),
-  status: z.string().default("pending"),
+  // `status` carries the descriptive detail; `met` is the explicit Good/Gap flag.
+  status: z.string().default(""),
+  met: z.boolean().default(false),
   notes: z.string().optional(),
 });
 export const gatesRouter = makeCrudRouter({
   module: "b2g_compliance_gates",
   table: "b2g_compliance_gates",
   schema: gateSchema,
-  columns: ["opportunity_id", "label", "status", "notes"],
+  columns: ["opportunity_id", "label", "status", "met", "notes"],
   searchable: ["label"],
   trackOwner: false,
   hasUpdatedAt: false,

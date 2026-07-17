@@ -121,6 +121,13 @@ export const MODULES: Record<string, ModuleConfig> = {
       { name: "due_date", label: "Due Date", type: "date" },
       { name: "contact_email", label: "Contact Email", type: "email" },
       { name: "status", label: "Status" },
+      // Acquisition details — settable at creation (also editable on the deal page).
+      { name: "solicitation_number", label: "Solicitation #" },
+      { name: "naics", label: "NAICS" },
+      { name: "set_aside", label: "Set-aside" },
+      { name: "clearance_level", label: "Clearance Level" },
+      { name: "incumbent", label: "Incumbent" },
+      { name: "action_officer", label: "Action Officer" },
       { name: "notes", label: "Notes", type: "textarea" },
     ],
   },

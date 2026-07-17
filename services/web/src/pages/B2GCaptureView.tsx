@@ -55,8 +55,6 @@ const initials = (s: string) =>
   (s.trim().split(/\s+/).map((p) => p[0]).slice(0, 2).join("") || "?").toUpperCase();
 const avatarColor = (s: string) =>
   AVATAR_COLORS[[...s].reduce((a, c) => a + c.charCodeAt(0), 0) % AVATAR_COLORS.length];
-const gateOk = (status: unknown) =>
-  /complete|done|pass|approved|on file|current|ok|verified/i.test(String(status ?? ""));
 
 function Detail({
   label,
@@ -120,6 +118,28 @@ function AddRow({
   );
 }
 
+/** Editable acquisition-detail fields (those backed by a real column). */
+const ACQ_FIELDS: { name: keyof Opp; label: string }[] = [
+  { name: "solicitation_number", label: "Solicitation #" },
+  { name: "naics", label: "NAICS" },
+  { name: "set_aside", label: "Set-aside" },
+  { name: "clearance_level", label: "Clearance" },
+  { name: "incumbent", label: "Incumbent" },
+  { name: "focus_area_rr_role", label: "Focus area" },
+  { name: "action_officer", label: "Action officer" },
+  { name: "status", label: "Status" },
+];
+
+/** Standard federal compliance/security gates offered as one-click additions. */
+const STANDARD_GATES = [
+  "Facility Clearance (FCL)",
+  "Personnel Clearance",
+  "CMMC Level",
+  "NIST SP 800-171",
+  "ITAR",
+  "FedRAMP / Impact Level",
+];
+
 export function B2GCaptureView() {
   const { id } = useParams();
   const [opp, setOpp] = useState<Opp | null>(null);
@@ -127,6 +147,9 @@ export function B2GCaptureView() {
   const [stakeholders, setStakeholders] = useState<Row[]>([]);
   const [gates, setGates] = useState<Row[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [editAcq, setEditAcq] = useState(false);
+  const [acqForm, setAcqForm] = useState<Record<string, string>>({});
+  const [savingAcq, setSavingAcq] = useState(false);
 
   const loadSubs = useCallback(() => {
     if (!id) return;
@@ -156,12 +179,88 @@ export function B2GCaptureView() {
     }
   }
 
+  function openAcqEditor() {
+    if (!opp) return;
+    const init: Record<string, string> = {};
+    ACQ_FIELDS.forEach((f) => {
+      const v = opp[f.name];
+      init[f.name as string] = v == null ? "" : String(v);
+    });
+    setAcqForm(init);
+    setEditAcq(true);
+  }
+
+  async function saveAcq() {
+    if (!opp) return;
+    setSavingAcq(true);
+    try {
+      const body: Record<string, unknown> = { notice_id: opp.notice_id };
+      ACQ_FIELDS.forEach((f) => {
+        const v = acqForm[f.name as string]?.trim() ?? "";
+        // fit is numeric elsewhere; these acquisition fields are all text.
+        body[f.name as string] = v === "" ? null : v;
+      });
+      await api.update("b2g-opportunities", opp.id, body);
+      setEditAcq(false);
+      load();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSavingAcq(false);
+    }
+  }
+
+  /** Persist a change to one gate (Good/Gap flag or its detail text). */
+  async function patchGate(g: Row, patch: { met?: boolean; status?: string }) {
+    if (!opp) return;
+    try {
+      await api.update("b2g-compliance-gates", g.id as string, {
+        opportunity_id: opp.id,
+        label: String(g.label),
+        status: patch.status ?? String(g.status ?? ""),
+        met: patch.met ?? g.met === true,
+      });
+      loadSubs();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
+  async function addGate(label: string) {
+    if (!opp || !label.trim()) return;
+    if (gates.some((g) => String(g.label).toLowerCase() === label.trim().toLowerCase()))
+      return; // avoid duplicates
+    try {
+      await api.create("b2g-compliance-gates", {
+        opportunity_id: opp.id,
+        label: label.trim(),
+        status: "",
+        met: false,
+      });
+      loadSubs();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
+  async function removeGate(g: Row) {
+    try {
+      await api.remove("b2g-compliance-gates", g.id as string);
+      loadSubs();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
   if (error) return <p className="error">{error}</p>;
   if (!opp) return <p className="muted">Loading…</p>;
 
   const curIdx = CAPTURE_STAGES.indexOf(opp.capture_stage ?? "");
   const nextStage = curIdx >= 0 && curIdx < CAPTURE_STAGES.length - 1 ? CAPTURE_STAGES[curIdx + 1] : null;
-  const gapCount = gates.filter((g) => !gateOk(g.status)).length;
+  const gapCount = gates.filter((g) => g.met !== true).length;
+  const missingStandard = STANDARD_GATES.filter(
+    (s) => !gates.some((g) => String(g.label).toLowerCase() === s.toLowerCase())
+  );
 
   return (
     <>
@@ -221,28 +320,59 @@ export function B2GCaptureView() {
         {/* Left column */}
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
           <div className="panel">
-            <div className="icon-title">
-              <span className="material-symbols-rounded">description</span>Acquisition details
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div className="icon-title" style={{ marginBottom: 0 }}>
+                <span className="material-symbols-rounded">description</span>Acquisition details
+              </div>
+              {!editAcq && (
+                <button className="btn" onClick={openAcqEditor}>
+                  <span className="material-symbols-rounded" style={{ fontSize: 16, verticalAlign: "-3px", marginRight: 4 }}>edit</span>
+                  Edit
+                </button>
+              )}
             </div>
-            <div className="detail-grid">
-              <Detail label="Solicitation #" value={opp.solicitation_number} />
-              <Detail label="NAICS" value={opp.naics} />
-              <Detail label="Set-aside" value={opp.set_aside} />
-              <Detail label="Clearance" value={opp.clearance_level} />
-              <Detail label="Incumbent" value={opp.incumbent} />
-              <Detail label="Focus area" value={opp.focus_area_rr_role} />
-              <Detail label="Action officer" value={opp.action_officer} />
-              <Detail
-                label="Fit score"
-                value={opp.fit_score_numeric ?? opp.fit_score_tier}
-              />
-              <Detail label="Status" value={opp.status} />
-              <Detail label="Contract vehicle" star="No contract-vehicle field (e.g. OTA/GSA/IDIQ) yet" />
-              <Detail label="Contract type" star="No contract-type field (e.g. CPFF/FFP) yet" />
-              <Detail label="Color of money" star="No appropriation / color-of-money field yet" />
-              <Detail label="Jurisdiction" star="Federal/State/Local jurisdiction not modeled yet" />
-              <Detail label="Period of perf." star="No period-of-performance field yet" />
-            </div>
+
+            {editAcq ? (
+              <>
+                <div className="detail-grid" style={{ marginTop: 15 }}>
+                  {ACQ_FIELDS.map((f) => (
+                    <label key={f.name as string} className="acq-field">
+                      <span className="dtl-label">{f.label}</span>
+                      <input
+                        value={acqForm[f.name as string] ?? ""}
+                        onChange={(e) => setAcqForm({ ...acqForm, [f.name as string]: e.target.value })}
+                      />
+                    </label>
+                  ))}
+                </div>
+                <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+                  <button className="btn btn-primary" onClick={saveAcq} disabled={savingAcq}>
+                    {savingAcq ? "Saving…" : "Save"}
+                  </button>
+                  <button className="btn" onClick={() => setEditAcq(false)}>Cancel</button>
+                </div>
+              </>
+            ) : (
+              <div className="detail-grid" style={{ marginTop: 15 }}>
+                <Detail label="Solicitation #" value={opp.solicitation_number} />
+                <Detail label="NAICS" value={opp.naics} />
+                <Detail label="Set-aside" value={opp.set_aside} />
+                <Detail label="Clearance" value={opp.clearance_level} />
+                <Detail label="Incumbent" value={opp.incumbent} />
+                <Detail label="Focus area" value={opp.focus_area_rr_role} />
+                <Detail label="Action officer" value={opp.action_officer} />
+                <Detail
+                  label="Fit score"
+                  value={opp.fit_score_numeric ?? opp.fit_score_tier}
+                />
+                <Detail label="Status" value={opp.status} />
+                <Detail label="Contract vehicle" star="No contract-vehicle field (e.g. OTA/GSA/IDIQ) yet" />
+                <Detail label="Contract type" star="No contract-type field (e.g. CPFF/FFP) yet" />
+                <Detail label="Color of money" star="No appropriation / color-of-money field yet" />
+                <Detail label="Jurisdiction" star="Federal/State/Local jurisdiction not modeled yet" />
+                <Detail label="Period of perf." star="No period-of-performance field yet" />
+              </div>
+            )}
           </div>
 
           <div className="panel">
@@ -256,30 +386,74 @@ export function B2GCaptureView() {
                 </span>
               )}
             </div>
-            <div className="gate-grid" style={{ marginTop: 15 }}>
+            <div className="gate-list" style={{ marginTop: 15 }}>
               {gates.map((g) => {
-                const ok = gateOk(g.status);
+                const ok = g.met === true;
                 return (
-                  <div className={"gate " + (ok ? "ok" : "warn")} key={g.id as string}>
+                  <div className={"gate2 " + (ok ? "ok" : "warn")} key={g.id as string}>
                     <span className="material-symbols-rounded g-ic">
                       {ok ? "check_circle" : "error"}
                     </span>
-                    <div style={{ flex: 1 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
                       <div className="g-title">{String(g.label)}</div>
-                      <div className="g-sub">{String(g.status ?? "")}</div>
+                      <input
+                        className="g-detail"
+                        placeholder="Add detail (e.g. SECRET · on file)…"
+                        defaultValue={String(g.status ?? "")}
+                        onBlur={(e) => {
+                          const v = e.target.value;
+                          if (v !== String(g.status ?? "")) patchGate(g, { status: v });
+                        }}
+                      />
                     </div>
+                    {/* Good / Gap toggle */}
+                    <div className="gg-toggle">
+                      <button
+                        className={"gg good" + (ok ? " on" : "")}
+                        onClick={() => patchGate(g, { met: true })}
+                        title="Requirement met"
+                      >
+                        Good
+                      </button>
+                      <button
+                        className={"gg gap" + (!ok ? " on" : "")}
+                        onClick={() => patchGate(g, { met: false })}
+                        title="Gap — not yet met"
+                      >
+                        Gap
+                      </button>
+                    </div>
+                    <button
+                      className="icon-btn"
+                      style={{ width: 28, height: 28 }}
+                      title="Remove gate"
+                      onClick={() => removeGate(g)}
+                    >
+                      <span className="material-symbols-rounded" style={{ fontSize: 16 }}>delete</span>
+                    </button>
                   </div>
                 );
               })}
-              {gates.length === 0 && <p className="muted">No gates yet.</p>}
+              {gates.length === 0 && <p className="muted">No gates yet — add from the standard set below.</p>}
             </div>
+
+            {/* Standard federal gate quick-add */}
+            {missingStandard.length > 0 && (
+              <div className="gate-templates">
+                <span className="muted" style={{ fontSize: 12, fontWeight: 600 }}>Add standard:</span>
+                {missingStandard.map((s) => (
+                  <button key={s} className="tmpl-chip" onClick={() => addGate(s)}>
+                    <span className="material-symbols-rounded" style={{ fontSize: 15 }}>add</span>
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
+            {/* Custom gate */}
             <AddRow
               resource="b2g-compliance-gates"
               oppId={opp.id}
-              fields={[
-                { name: "label", label: "Gate" },
-                { name: "status", label: "Status" },
-              ]}
+              fields={[{ name: "label", label: "Custom gate" }]}
               onAdded={loadSubs}
             />
           </div>

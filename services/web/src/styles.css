@@ -954,6 +954,118 @@ tbody tr:hover {
   font-size: 11.5px;
   color: var(--text-2);
 }
+
+/* Editable compliance gates (good/gap) */
+.gate-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.gate2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 11px;
+  background: var(--surface-3);
+}
+.gate2.ok {
+  background: var(--pos-soft);
+}
+.gate2.warn {
+  background: var(--warn-soft);
+}
+.gate2 .g-ic {
+  font-size: 18px;
+  flex: 0 0 auto;
+}
+.gate2.ok .g-ic {
+  color: var(--pos);
+}
+.gate2.warn .g-ic {
+  color: var(--warn);
+}
+.gate2 .g-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+.gate2 .g-detail {
+  width: 100%;
+  margin-top: 2px;
+  padding: 3px 6px;
+  font-size: 11.5px;
+  color: var(--text-2);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+}
+.gate2 .g-detail:hover {
+  border-color: var(--border-strong);
+}
+.gate2 .g-detail:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--surface);
+}
+.gg-toggle {
+  display: inline-flex;
+  flex: 0 0 auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 2px;
+  gap: 2px;
+}
+.gg {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 6px;
+  color: var(--text-3);
+}
+.gg.good.on {
+  background: var(--pos-soft);
+  color: var(--pos);
+}
+.gg.gap.on {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+.gate-templates {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  margin-top: 12px;
+}
+.tmpl-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px dashed var(--accent);
+  background: transparent;
+  color: var(--accent-strong);
+  cursor: pointer;
+}
+.tmpl-chip:hover {
+  background: var(--accent-soft);
+}
+.acq-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.acq-field input {
+  padding: 6px 8px;
+  font-size: 13px;
+}
 .team-row {
   display: flex;
   align-items: center;
