@@ -41,5 +41,17 @@ export default defineConfig({
     // Inline everything so there are no separate asset requests.
     assetsInlineLimit: 100_000_000,
     chunkSizeWarningLimit: 5000,
+    // Apps Script serves the app inside a sandboxed iframe where inline
+    // <script type="module"> does NOT execute. Emit a single classic IIFE
+    // bundle instead (the postbuild step strips the leftover type="module").
+    target: "es2018",
+    modulePreload: false,
+    rollupOptions: {
+      output: {
+        format: "iife",
+        inlineDynamicImports: true,
+        entryFileNames: "app.js",
+      },
+    },
   },
 });

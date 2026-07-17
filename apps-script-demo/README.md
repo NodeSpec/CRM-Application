@@ -93,3 +93,10 @@ it only seeds data into empty config tabs.
   reliable invite path in the demo.
 - This is a demo backend — no concurrency control, no server-side validation
   beyond the frontend's, and no auth. Don't put real data in it.
+- **Why the bundle is a classic IIFE, not ES modules:** Apps Script serves the
+  app inside a sandboxed iframe where inline `<script type="module">` silently
+  does not execute (→ blank page). The Vite build emits a single classic IIFE
+  (`rollupOptions.output.format: "iife"`) and `scripts/build.mjs` strips any
+  leftover `type="module"` / `crossorigin` / `modulepreload`. If you change the
+  build, keep it a classic script. The entry (`gasMain.tsx`) also renders any
+  startup error into `#root` instead of leaving the page blank.

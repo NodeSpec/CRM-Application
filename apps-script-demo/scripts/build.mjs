@@ -14,6 +14,19 @@ if (!existsSync(src)) {
   process.exit(1);
 }
 
-const html = readFileSync(src, "utf8");
+let html = readFileSync(src, "utf8");
+
+// Apps Script's sandboxed iframe does not execute inline ES-module scripts.
+// The bundle is built as a classic IIFE; strip the leftover module markers so
+// the inline <script> runs as a classic script.
+html = html
+  .replace(/<script\s+type="module"([^>]*)>/g, "<script$1>")
+  .replace(/\s+crossorigin(?==?)/g, "")
+  .replace(/<link[^>]+rel="modulepreload"[^>]*>/g, "");
+
+if (/type="module"/.test(html)) {
+  console.error("[build] WARNING: a type=module script survived — it will not run in Apps Script.");
+}
+
 writeFileSync(dest, html);
 console.log(`[build] wrote ${(html.length / 1024).toFixed(0)} KiB -> appsscript/Index.html`);
