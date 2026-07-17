@@ -155,7 +155,11 @@ export function B2GCaptureView() {
     if (!id) return;
     api.list<Row>("b2g-teaming-partners", { opportunity_id: id }).then(setTeaming).catch(() => {});
     api.list<Row>("b2g-stakeholders", { opportunity_id: id }).then(setStakeholders).catch(() => {});
-    api.list<Row>("b2g-compliance-gates", { opportunity_id: id }).then(setGates).catch(() => {});
+    api
+      .list<Row>("b2g-compliance-gates", { opportunity_id: id })
+      // Stable display order (rows seeded together share a created_at timestamp).
+      .then((gs) => setGates([...gs].sort((a, b) => String(a.label).localeCompare(String(b.label)))))
+      .catch(() => {});
   }, [id]);
   const load = useCallback(() => {
     if (!id) return;
@@ -210,9 +214,11 @@ export function B2GCaptureView() {
     }
   }
 
-  /** Persist a change to one gate (Good/Gap flag or its detail text). */
+  /** Persist a change to one gate (Good/Gap flag or its detail text). Optimistic
+   *  so the toggle reflects instantly and is not subject to refetch ordering. */
   async function patchGate(g: Row, patch: { met?: boolean; status?: string }) {
     if (!opp) return;
+    setGates((gs) => gs.map((x) => (x.id === g.id ? { ...x, ...patch } : x)));
     try {
       await api.update("b2g-compliance-gates", g.id as string, {
         opportunity_id: opp.id,
@@ -223,6 +229,7 @@ export function B2GCaptureView() {
       loadSubs();
     } catch (e) {
       setError((e as Error).message);
+      loadSubs(); // reconcile back to server truth on failure
     }
   }
 
@@ -252,8 +259,9 @@ export function B2GCaptureView() {
     }
   }
 
-  if (error) return <p className="error">{error}</p>;
-  if (!opp) return <p className="muted">Loading…</p>;
+  // Only a load failure (no opportunity) blocks the page; mutation errors show
+  // as a dismissible banner so a single failed action doesn't nuke the view.
+  if (!opp) return error ? <p className="error">{error}</p> : <p className="muted">Loading…</p>;
 
   const curIdx = CAPTURE_STAGES.indexOf(opp.capture_stage ?? "");
   const nextStage = curIdx >= 0 && curIdx < CAPTURE_STAGES.length - 1 ? CAPTURE_STAGES[curIdx + 1] : null;
@@ -271,6 +279,13 @@ export function B2GCaptureView() {
         <span className="spacer" />
         <DataLegend />
       </div>
+
+      {error && (
+        <div className="error" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ flex: 1 }}>{error}</span>
+          <button className="btn" onClick={() => setError(null)}>Dismiss</button>
+        </div>
+      )}
 
       {/* Classification header */}
       <div className="detail-header">
