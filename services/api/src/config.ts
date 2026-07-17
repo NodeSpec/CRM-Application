@@ -67,6 +67,17 @@ const EnvSchema = z.object({
   SOCIAL_X_TOKEN: z.string().optional().default(""),
   SOCIAL_INSTAGRAM_TOKEN: z.string().optional().default(""),
   SOCIAL_TIKTOK_TOKEN: z.string().optional().default(""),
+
+  // Email / calendar invite delivery (REQ-027). Server-side sending of event
+  // invites (so attendees receive the email directly, without the organizer's
+  // mail client) routes through an email gateway (SMTP relay or Microsoft Graph)
+  // reached via the egress gateway. When EMAIL_GATEWAY_URL is unset the invite
+  // endpoint returns the generated .ics with delivered=false — it never claims
+  // to have sent mail it couldn't. Client-side Outlook/Google/.ics flows need
+  // none of this.
+  EMAIL_GATEWAY_URL: z.string().optional().default(""),
+  EMAIL_FROM: z.string().optional().default(""),
+  EMAIL_API_TOKEN: z.string().optional().default(""),
 });
 
 export type AppConfig = z.infer<typeof EnvSchema> & {

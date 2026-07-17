@@ -38,6 +38,8 @@ component inventory, connection topology, and links to per-component task docume
 | CRM API | CRM Database | sql | CRM Persistence |
 | CRM API | Egress Gateway | rest | Outbound 3rd-party/social APIs (REQ-026) |
 | Egress Gateway | Social Platform APIs | rest | LinkedIn/X/Instagram/TikTok (allowlisted) |
+| CRM API | Email Gateway | rest | Event invite delivery (REQ-027) |
+| Email Gateway | Mail transport | smtp/graph | SMTP relay or Microsoft Graph |
 
 ### Integration egress/ingress (REQ-026)
 
@@ -49,6 +51,19 @@ enter via the reverse-proxy **ingress** with signature verification. This keeps
 third-party secrets and hostnames out of app code and prevents integration sprawl
 from becoming technical debt. Absent credentials or a policy denial degrade to an
 honest "not connected" state; no data is fabricated.
+
+### Event invite delivery (REQ-027)
+
+Event calendar invites work **client-side with no backend**: the web app builds a
+portable `.ics` (VEVENT) and pre-filled Outlook/Google compose deeplinks, so a
+user pushes an invite to attendees from their own mailbox, or copies/downloads
+the `.ics`. **Server-side** delivery — the API emailing attendees directly — is
+optional and, like all outbound integration, routes through a gateway: an
+**email gateway** (managed SMTP relay or Microsoft Graph) reached via egress,
+holding the mail credentials (`EMAIL_GATEWAY_URL` / `EMAIL_FROM` /
+`EMAIL_API_TOKEN`). `POST /events/:id/invite` returns the canonical `.ics` and,
+when the gateway is unset, `delivered:false` with a reason — it never claims to
+have sent mail it couldn't.
 
 ## Task Documents
 

@@ -4,6 +4,7 @@ import { authRouter } from "../modules/auth/index.js";
 import { b2bLeadsRouter } from "../modules/b2b-leads/index.js";
 import { b2gOpportunitiesRouter } from "../modules/b2g-opportunities/index.js";
 import { eventsRouter } from "../modules/events/index.js";
+import { eventInviteRouter } from "../modules/events-invite/index.js";
 import { submissionsRouter } from "../modules/submissions/index.js";
 import { submissionCategoriesRouter } from "../modules/submission-categories/index.js";
 import { publicityContactsRouter } from "../modules/publicity-contacts/index.js";
@@ -42,6 +43,8 @@ v1Router.use(authenticate);
 
 v1Router.use("/b2b-leads", b2bLeadsRouter);
 v1Router.use("/b2g-opportunities", b2gOpportunitiesRouter);
+// Invite sub-route mounted first so /events/:id/invite resolves before CRUD :id.
+v1Router.use("/events", eventInviteRouter);
 v1Router.use("/events", eventsRouter);
 v1Router.use("/submissions", submissionsRouter);
 v1Router.use("/submission-categories", submissionCategoriesRouter);

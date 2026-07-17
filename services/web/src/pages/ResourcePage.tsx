@@ -44,7 +44,14 @@ function Badge({ info }: { info: BadgeInfo }) {
   );
 }
 
-export function ResourcePage({ config }: { config: ModuleConfig }) {
+export function ResourcePage({
+  config,
+  rowAction,
+}: {
+  config: ModuleConfig;
+  /** Optional per-row action rendered in a trailing column (e.g. event invite). */
+  rowAction?: (row: Record<string, unknown>) => React.ReactNode;
+}) {
   const { resource, description, columns, fields } = config;
   const meta = useMeta();
   const [searchParams] = useSearchParams();
@@ -309,18 +316,19 @@ export function ResourcePage({ config }: { config: ModuleConfig }) {
               {columns.map((c) => (
                 <th key={c.key}>{c.label}</th>
               ))}
+              {rowAction && <th></th>}
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={columns.length} className="muted">
+                <td colSpan={columns.length + (rowAction ? 1 : 0)} className="muted">
                   Loading…
                 </td>
               </tr>
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="muted">
+                <td colSpan={columns.length + (rowAction ? 1 : 0)} className="muted">
                   No records match.
                 </td>
               </tr>
@@ -338,6 +346,11 @@ export function ResourcePage({ config }: { config: ModuleConfig }) {
                       )}
                     </td>
                   ))}
+                  {rowAction && (
+                    <td data-label="" style={{ textAlign: "right" }}>
+                      {rowAction(row)}
+                    </td>
+                  )}
                 </tr>
               ))
             )}

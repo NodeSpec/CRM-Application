@@ -572,3 +572,27 @@ code. To keep this from becoming technical debt as more integrations are added:
 
 Config: `SOCIAL_EGRESS_BASE_URL`, `SOCIAL_LINKEDIN_TOKEN`, `SOCIAL_X_TOKEN`,
 `SOCIAL_INSTAGRAM_TOKEN`, `SOCIAL_TIKTOK_TOKEN` (all optional; see `.env.example`).
+
+## Design Expansion (REQ-027) — Event invite delivery & email gateway
+
+Event calendar invites (REQ-009):
+
+- **Client-side (no backend):** the web app builds a portable `.ics` VEVENT and
+  pre-filled Outlook web / Google Calendar compose deeplinks (attendees in the
+  `to`/`add` param), plus copy-to-clipboard and `.ics` download. This is the
+  working feature and needs no server email.
+- **Server-side seam:** `POST /api/v1/events/:id/invite { emails: [] }` builds the
+  canonical `.ics` (METHOD:REQUEST with ATTENDEEs) and returns it. When an email
+  gateway is configured it emails the invite to the attendees; otherwise it
+  returns `delivered:false` with a reason. Mounted before the events CRUD router
+  so the sub-route resolves ahead of `/:id`.
+
+### Architecture requirement — email gateway via egress (REQ-027)
+
+Server-side invite mail MUST route through a dedicated **email gateway** (a
+managed SMTP relay or Microsoft Graph endpoint) reached via the egress gateway,
+not a direct SMTP/third-party call from app code. The gateway holds the mail
+credentials and owns rate limiting and sender reputation. Config:
+`EMAIL_GATEWAY_URL`, `EMAIL_FROM`, `EMAIL_API_TOKEN` (all optional; see
+`.env.example`). Absent the gateway, delivery degrades honestly to
+`delivered:false` — the client still has the deeplink/.ics paths.
