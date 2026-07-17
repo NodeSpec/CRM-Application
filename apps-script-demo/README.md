@@ -100,8 +100,15 @@ it only seeds data into empty config tabs.
   leftover `type="module"` / `crossorigin` / `modulepreload`. If you change the
   build, keep it a classic script. The entry (`gasMain.tsx`) also renders any
   startup error into `#root` instead of leaving the page blank.
-- **Why the bundle is pure ASCII:** Apps Script's editor/serving can corrupt
-  multibyte characters (emoji like 👋, `·`, `—`), which the browser then reports
-  as `Uncaught SyntaxError: Invalid or unexpected token`. The build emits
-  ASCII-only JS (`esbuild.charset: "ascii"`) so every non-ASCII character is a
-  `\uXXXX` escape and cannot be mangled in transit.
+- **Why the JS/CSS are base64 in `Index.html`:** Apps Script injects your served
+  HTML into the sandbox iframe with `document.write(...)`. A 300 KB minified
+  React bundle contains sequences that break that write
+  (`Failed to execute 'write' on 'Document': Invalid or unexpected token`). So
+  `scripts/build.mjs` base64-encodes the JS and CSS (a charset that cannot
+  contain `<`, `>`, quotes, backslashes, or newlines) and a tiny bootstrap
+  decodes them and injects a `<style>` + `<script>` at runtime. The served HTML
+  is then immune to that breakage. The bundle is also built ASCII-only + as a
+  classic IIFE for good measure.
+- **Diagnostic:** open `…/exec?page=diag` for a dependency-free page that checks
+  inline-script execution, `google.script.run`, and a Sheet round-trip in
+  isolation (served by `Diag.html` + `ping()`).
