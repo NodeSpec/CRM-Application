@@ -35,10 +35,10 @@ export default defineConfig({
   resolve: {
     alias: { "@web": coreSrc },
   },
-  // Emit ASCII-only JS (escape emoji/·/→ etc. to \uXXXX). Apps Script's editor
-  // and serving can corrupt multibyte characters, which shows up in the browser
-  // as "Uncaught SyntaxError: Invalid or unexpected token".
-  esbuild: { charset: "ascii" },
+  // ASCII-only output + strip all comments. Multi-line /* @license */ blocks put
+  // real newlines inside the inline <script>; some copy/serve steps mangle those.
+  // A single-line, comment-free, ASCII blob is the most robust for Apps Script.
+  esbuild: { charset: "ascii", legalComments: "none" },
   build: {
     outDir: path.resolve(dir, "dist"),
     sourcemap: false,

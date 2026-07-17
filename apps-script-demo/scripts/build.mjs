@@ -24,9 +24,17 @@ html = html
   .replace(/\s+crossorigin(?==?)/g, "")
   .replace(/<link[^>]+rel="modulepreload"[^>]*>/g, "");
 
+// Strip astral (emoji) characters entirely — they only ever appear as escaped
+// surrogate pairs (\uD83x\uDCxx) in string literals here, and add no value to
+// the demo. Removes any residual multibyte-corruption risk.
+html = html.replace(/\\u[dD][89abAB][0-9a-fA-F]{2}\\u[dD][c-fC-F][0-9a-fA-F]{2}/g, "");
+
 if (/type="module"/.test(html)) {
   console.error("[build] WARNING: a type=module script survived — it will not run in Apps Script.");
 }
+// Non-ASCII anywhere is a red flag for Apps Script serving.
+const nonAscii = (html.match(/[^\x00-\x7F]/g) || []).length;
+if (nonAscii) console.error(`[build] WARNING: ${nonAscii} non-ASCII char(s) remain in the bundle.`);
 
 writeFileSync(dest, html);
 console.log(`[build] wrote ${(html.length / 1024).toFixed(0)} KiB -> appsscript/Index.html`);
