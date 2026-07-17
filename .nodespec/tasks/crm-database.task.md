@@ -237,3 +237,35 @@ Startup/initialization order based on edge directions and interaction patterns.
 | File | Kind | Language | Status |
 |------|------|----------|--------|
 | `.nodespec/tests/req-017-data-persistence-schema-migrations.tests.md` - Test plan for requirement: Data Persistence & Schema Migrations | test-plan | markdown | draft |
+
+## Design Expansion (REQ-019–025) — new & extended schema
+
+The Claude Design expanded the product beyond the original five modules. The following schema
+changes are added as numbered migrations (0012+), all additive/nullable so existing data is
+preserved:
+
+- **companies** (REQ-020): `id, name, website, domain, industry, segment, owner_id→users, about,
+  custom_fields JSONB, created_by, timestamps`.
+- **contacts** (REQ-019): person-level, distinct from `publicity_contacts` — `id, full_name, title,
+  email, phone, company_id→companies, owner_id→users, lifecycle_stage, tags TEXT[], notes,
+  custom_fields JSONB, created_by, timestamps`.
+- **b2b_leads deal fields** (REQ-021): add `amount NUMERIC, close_date DATE, owner_id→users,
+  company_id→companies, contact_id→contacts`. The existing `lead_statuses` pipeline doubles as the
+  Kanban stages; won = `is_closed` stage `Closed-Won`.
+- **b2g_opportunities capture** (REQ-022): add `naics, set_aside, incumbent, solicitation_number,
+  clearance_level, capture_stage, meddic JSONB`; child tables `b2g_teaming_partners`,
+  `b2g_stakeholders`, `b2g_compliance_gates` (each FK → opportunity).
+- **activities** + **tasks** (REQ-024): `activities(id, actor_id, type, subject, body, module,
+  record_id, occurred_at)`; `tasks(id, title, due_date, assignee_id, status, module, record_id)`.
+- **custom_field_defs** (REQ-023): `id, module, key, label, type, options JSONB, is_active`; values
+  live in each record table's `custom_fields JSONB` column (JSONB approach, not EAV).
+- Configurable **lifecycle stages** reuse/extend the `lead_statuses` pattern.
+
+No recurring-revenue (MRR) columns are introduced — only one-time deal `amount` (REQ-021).
+
+## Design Expansion (REQ-026) — Company social links
+
+- Migration `0019_company_social_links`: adds `companies.social_links JSONB NOT NULL
+  DEFAULT '{}'`, holding official profile URLs keyed by platform
+  (`linkedin`/`x`/`instagram`/`tiktok`). Down migration drops the column. No live
+  post data is stored — only the profile links the user enters.

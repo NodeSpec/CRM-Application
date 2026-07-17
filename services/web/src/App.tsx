@@ -1,13 +1,21 @@
 import { Routes, Route } from "react-router-dom";
 import { Sidebar } from "./components/Sidebar";
+import { MobileTabBar } from "./components/MobileTabBar";
 import { Topbar } from "./components/Topbar";
 import { Dashboard } from "./pages/Dashboard";
 import { AdminPage } from "./pages/AdminPage";
 import { ResourcePage } from "./pages/ResourcePage";
 import { EventsPage } from "./pages/EventsPage";
+import { ContactsPage } from "./pages/ContactsPage";
+import { DealsKanban } from "./pages/DealsKanban";
+import { Company360 } from "./pages/Company360";
+import { ContactDetail } from "./pages/ContactDetail";
+import { B2GCaptureView } from "./pages/B2GCaptureView";
+import { B2BDealView } from "./pages/B2BDealView";
 import { CategoriesAdmin } from "./pages/admin/CategoriesAdmin";
 import { UsersAdmin } from "./pages/admin/UsersAdmin";
 import { AuditAdmin } from "./pages/admin/AuditAdmin";
+import { CustomFieldsAdmin } from "./pages/admin/CustomFieldsAdmin";
 import { MODULES } from "./modules";
 import { useAuth } from "./auth/AuthContext";
 
@@ -57,21 +65,32 @@ export default function App() {
         <div className="content">
           <Routes>
             <Route path="/" element={<Dashboard />} />
-            {Object.values(MODULES).map((cfg) =>
-              cfg.resource === "events" ? (
-                <Route key="events" path="/events" element={<EventsPage />} />
-              ) : (
-                <Route
-                  key={cfg.resource}
-                  path={`/${cfg.resource}`}
-                  element={<ResourcePage config={cfg} />}
-                />
-              )
-            )}
+            {Object.values(MODULES).map((cfg) => {
+              const el =
+                cfg.resource === "events" ? (
+                  <EventsPage />
+                ) : cfg.resource === "contacts" ? (
+                  <ContactsPage />
+                ) : (
+                  <ResourcePage config={cfg} />
+                );
+              return (
+                <Route key={cfg.resource} path={`/${cfg.resource}`} element={el} />
+              );
+            })}
+            <Route path="/deals" element={<DealsKanban />} />
+            <Route path="/b2b-leads/:id" element={<B2BDealView />} />
+            <Route path="/companies/:id" element={<Company360 />} />
+            <Route path="/contacts/:id" element={<ContactDetail />} />
+            <Route
+              path="/b2g-opportunities/:id"
+              element={<B2GCaptureView />}
+            />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/admin/categories" element={<CategoriesAdmin />} />
             <Route path="/admin/users" element={<UsersAdmin />} />
             <Route path="/admin/audit" element={<AuditAdmin />} />
+            <Route path="/admin/custom-fields" element={<CustomFieldsAdmin />} />
             <Route
               path="*"
               element={
@@ -83,6 +102,7 @@ export default function App() {
           </Routes>
         </div>
       </div>
+      <MobileTabBar />
     </div>
   );
 }

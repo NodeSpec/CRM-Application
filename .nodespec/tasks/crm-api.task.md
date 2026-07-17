@@ -516,3 +516,83 @@ Startup/initialization order based on edge directions and interaction patterns.
 | `.nodespec/tests/req-005-b2b-lead-status-follow-up-workflow.tests.md` - Test plan for requirement: B2B Lead Status & Follow-up Workflow | test-plan | markdown | draft |
 | `.nodespec/tests/req-013-unified-dashboard-cross-module-summary.tests.md` - Test plan for requirement: Unified Dashboard & Cross-Module Summary | test-plan | markdown | draft |
 | `.nodespec/tests/req-002-role-based-access-control.tests.md` - Test plan for requirement: Role-Based Access Control | test-plan | markdown | draft |
+
+## Design Expansion (REQ-019–025) — new endpoints & aggregations
+
+New API surface added under `/api/v1`, reusing the generic `makeCrudRouter` factory where possible:
+
+- **companies** (REQ-020), **contacts** (REQ-019), **activities** + **tasks** (REQ-024): standard
+  CRUD via `makeCrudRouter` with per-module `columns`, `searchable`, and (contacts) `tags` array +
+  `custom_fields` JSONB passthrough.
+- **b2b-leads**: extended columns `amount, close_date, owner_id, company_id, contact_id` (REQ-021).
+- **deals aggregation**: `/dashboard` gains open pipeline value + won revenue from real deal amounts;
+  a pipeline/Kanban grouping (deals by `lead_statuses` stage) is exposed for the board view.
+- **b2g capture** (REQ-022): opportunity gains capture columns + `meddic` JSONB; sub-resources for
+  teaming partners, stakeholders, and compliance gates (nested routes or JSONB).
+- **custom-field-defs** (REQ-023): admin-only CRUD (`writeRole: 'admin'`); the generic router
+  accepts/returns each record's `custom_fields` JSONB.
+- **/meta** extended with owners (users), lifecycle stages, and active custom-field definitions so the
+  frontend renders dynamic selects/fields.
+- RBAC: custom-field-defs and pipeline-stage management are Admin-only; role re-read per request
+  already applies (REQ-002).
+
+## Design Expansion (REQ-026) — Social profile integration & egress gateway
+
+Company 360 (design 4A) lets a user store a company's official social profile URLs
+(LinkedIn / X / Instagram / TikTok) and surfaces a Social activity feed.
+
+- **Data**: `companies.social_links JSONB` (migration `0019`), keyed by platform.
+  Exposed through the companies `makeCrudRouter` (`social_links` in `columns` +
+  `jsonColumns`, validated by `socialLinksSchema`).
+- **Feed endpoint**: `GET /api/v1/companies/:id/social-feed` (mounted before the
+  companies CRUD router so the sub-route resolves first). Returns one `ChannelFeed`
+  per platform: `{ connected, url, configured, posts, reason }` plus a top-level
+  `live` flag.
+- **Provider seam** (`modules/social`): one `SocialProvider` per platform behind a
+  `GatewayProvider`. A provider only returns posts when its API credential is
+  present **and** the outbound call (to be implemented at the single documented
+  seam) succeeds. No credential ⇒ `configured:false`, empty `posts`, honest
+  `reason` — the API never fabricates social posts.
+
+### Architecture requirement — API gateway + egress/ingress (avoid tech debt)
+
+Third-party/social integrations MUST NOT call external hosts directly from app
+code. To keep this from becoming technical debt as more integrations are added:
+
+- **Egress gateway** (outbound): all calls to social/third-party APIs route through
+  a dedicated egress gateway (`SOCIAL_EGRESS_BASE_URL`) that owns the host
+  allowlist, per-provider credential injection (`SOCIAL_*_TOKEN`), rate limiting,
+  timeouts/retries, and centralized logging. App code holds no third-party secrets
+  and hardcodes no third-party hostnames.
+- **Ingress** (inbound): any platform webhooks (e.g. post notifications) enter
+  through the reverse-proxy ingress with signature verification, not ad-hoc
+  listeners.
+- **Failure posture**: a missing credential or a gateway/policy denial degrades to
+  an honest "not connected" state; it never invents data.
+
+Config: `SOCIAL_EGRESS_BASE_URL`, `SOCIAL_LINKEDIN_TOKEN`, `SOCIAL_X_TOKEN`,
+`SOCIAL_INSTAGRAM_TOKEN`, `SOCIAL_TIKTOK_TOKEN` (all optional; see `.env.example`).
+
+## Design Expansion (REQ-027) — Event invite delivery & email gateway
+
+Event calendar invites (REQ-009):
+
+- **Client-side (no backend):** the web app builds a portable `.ics` VEVENT and
+  pre-filled Outlook web / Google Calendar compose deeplinks (attendees in the
+  `to`/`add` param), plus copy-to-clipboard and `.ics` download. This is the
+  working feature and needs no server email.
+- **Server-side seam:** `POST /api/v1/events/:id/invite { emails: [] }` builds the
+  canonical `.ics` (METHOD:REQUEST with ATTENDEEs) and returns it. When an email
+  gateway is configured it emails the invite to the attendees; otherwise it
+  returns `delivered:false` with a reason. Mounted before the events CRUD router
+  so the sub-route resolves ahead of `/:id`.
+
+### Architecture requirement — email gateway via egress (REQ-027)
+
+Server-side invite mail MUST route through a dedicated **email gateway** (a
+managed SMTP relay or Microsoft Graph endpoint) reached via the egress gateway,
+not a direct SMTP/third-party call from app code. The gateway holds the mail
+credentials and owns rate limiting and sender reputation. Config:
+`EMAIL_GATEWAY_URL`, `EMAIL_FROM`, `EMAIL_API_TOKEN` (all optional; see
+`.env.example`). Absent the gateway, delivery degrades honestly to
+`delivered:false` — the client still has the deeplink/.ics paths.

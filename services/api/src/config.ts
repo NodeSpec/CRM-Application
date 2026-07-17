@@ -55,11 +55,39 @@ const EnvSchema = z.object({
     .positive()
     .default(14),
   FEATURE_FLAGS: z.string().optional().default(""),
+
+  // Social profile integrations (REQ-026). Outbound calls to third-party social
+  // platforms MUST route through a dedicated egress gateway (allowlist + rate
+  // limiting + credential injection) rather than being made directly from app
+  // code. SOCIAL_EGRESS_BASE_URL is that gateway's base; the *_TOKEN vars hold
+  // per-provider credentials. When a provider's credential is absent the feed
+  // reports "not connected" and returns no posts — never fabricated data.
+  SOCIAL_EGRESS_BASE_URL: z.string().optional().default(""),
+  SOCIAL_LINKEDIN_TOKEN: z.string().optional().default(""),
+  SOCIAL_X_TOKEN: z.string().optional().default(""),
+  SOCIAL_INSTAGRAM_TOKEN: z.string().optional().default(""),
+  SOCIAL_TIKTOK_TOKEN: z.string().optional().default(""),
+
+  // Email / calendar invite delivery (REQ-027). Server-side sending of event
+  // invites (so attendees receive the email directly, without the organizer's
+  // mail client) routes through an email gateway (SMTP relay or Microsoft Graph)
+  // reached via the egress gateway. When EMAIL_GATEWAY_URL is unset the invite
+  // endpoint returns the generated .ics with delivered=false — it never claims
+  // to have sent mail it couldn't. Client-side Outlook/Google/.ics flows need
+  // none of this.
+  EMAIL_GATEWAY_URL: z.string().optional().default(""),
+  EMAIL_FROM: z.string().optional().default(""),
+  EMAIL_API_TOKEN: z.string().optional().default(""),
 });
 
 export type AppConfig = z.infer<typeof EnvSchema> & {
   isProduction: boolean;
   featureFlags: string[];
+  /** Per-platform social API credential presence/value, keyed by platform. */
+  socialCredentials: Record<
+    "linkedin" | "x" | "instagram" | "tiktok",
+    string
+  >;
 };
 
 function loadConfig(): AppConfig {
@@ -85,6 +113,12 @@ function loadConfig(): AppConfig {
     featureFlags: env.FEATURE_FLAGS.split(",")
       .map((f) => f.trim())
       .filter(Boolean),
+    socialCredentials: {
+      linkedin: env.SOCIAL_LINKEDIN_TOKEN,
+      x: env.SOCIAL_X_TOKEN,
+      instagram: env.SOCIAL_INSTAGRAM_TOKEN,
+      tiktok: env.SOCIAL_TIKTOK_TOKEN,
+    },
   };
 }
 

@@ -21,6 +21,15 @@ export const b2gOpportunitySchema = z
     status: z.string().default("Open"),
     action_officer: z.string().optional(),
     notes: z.string().optional(),
+    // Capture management (REQ-022)
+    naics: z.string().optional(),
+    set_aside: z.string().optional(),
+    incumbent: z.string().optional(),
+    solicitation_number: z.string().optional(),
+    clearance_level: z.string().optional(),
+    capture_stage: z.string().optional(),
+    meddic: z.record(z.unknown()).optional(),
+    custom_fields: z.record(z.unknown()).optional(),
   })
   .refine(
     (v) => v.fit_score_numeric != null || v.fit_score_tier != null || true,
@@ -45,6 +54,15 @@ export const b2gOpportunitiesRouter = makeCrudRouter({
     "status",
     "action_officer",
     "notes",
+    "naics",
+    "set_aside",
+    "incumbent",
+    "solicitation_number",
+    "clearance_level",
+    "capture_stage",
+    "meddic",
+    "custom_fields",
   ],
   searchable: ["notice_id", "agency_department", "focus_area_rr_role"],
+  jsonColumns: ["meddic", "custom_fields"],
 });

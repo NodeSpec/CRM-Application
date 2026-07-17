@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { api, ApiError } from "../api/client";
 import type { Column, Field, ModuleConfig, OptionSource } from "../modules";
 import { useMeta, type Meta } from "../lib/useMeta";
@@ -25,6 +25,13 @@ function fieldOptions(source: OptionSource | undefined, meta: Meta | null) {
     return meta.lead_statuses.map((s) => ({ value: s.label, label: s.label }));
   if (source === "submission_categories")
     return meta.submission_categories.map((c) => ({ value: c.id, label: c.label }));
+  if (source === "contact_lifecycle_stages")
+    return meta.contact_lifecycle_stages.map((s) => ({ value: s, label: s }));
+  if (source === "owners")
+    return meta.owners.map((o) => ({
+      value: o.id,
+      label: o.display_name || o.email,
+    }));
   return meta.publicity_formats.map((f) => ({ value: f, label: f }));
 }
 
@@ -37,7 +44,14 @@ function Badge({ info }: { info: BadgeInfo }) {
   );
 }
 
-export function ResourcePage({ config }: { config: ModuleConfig }) {
+export function ResourcePage({
+  config,
+  rowAction,
+}: {
+  config: ModuleConfig;
+  /** Optional per-row action rendered in a trailing column (e.g. event invite). */
+  rowAction?: (row: Record<string, unknown>) => React.ReactNode;
+}) {
   const { resource, description, columns, fields } = config;
   const meta = useMeta();
   const [searchParams] = useSearchParams();
@@ -50,10 +64,15 @@ export function ResourcePage({ config }: { config: ModuleConfig }) {
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<Record<string, string>>({});
+  const [cfForm, setCfForm] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
   const b2gDays = meta?.thresholds.b2g_due_date_threshold_days ?? 14;
   const subDays = meta?.thresholds.submission_deadline_threshold_days ?? 14;
+  // Active custom fields for this module (REQ-023); module name = table name.
+  const cfDefs = (meta?.custom_field_defs ?? []).filter(
+    (d) => d.module === resource.replace(/-/g, "_")
+  );
 
   // Re-initialize filters from the URL whenever the route or its query changes
   // (so dashboard KPI deep-links land pre-filtered). Waits for meta thresholds.
@@ -119,8 +138,17 @@ export function ResourcePage({ config }: { config: ModuleConfig }) {
         if (raw == null || raw === "") continue;
         payload[f.name] = f.type === "number" ? Number(raw) : raw;
       }
+      // Custom field values → custom_fields JSONB (REQ-023).
+      const cf: Record<string, unknown> = {};
+      for (const d of cfDefs) {
+        const v = cfForm[d.key];
+        if (v == null || v === "") continue;
+        cf[d.key] = d.type === "number" ? Number(v) : v;
+      }
+      if (Object.keys(cf).length) payload.custom_fields = cf;
       await api.create(resource, payload);
       setForm({});
+      setCfForm({});
       setShowForm(false);
       await load();
     } catch (e) {
@@ -241,6 +269,37 @@ export function ResourcePage({ config }: { config: ModuleConfig }) {
                 )}
               </label>
             ))}
+            {/* Admin-defined custom fields (REQ-023) */}
+            {cfDefs.map((d) => (
+              <label key={`cf-${d.key}`}>
+                <span>{d.label}</span>
+                {d.type === "select" ? (
+                  <select
+                    value={cfForm[d.key] ?? ""}
+                    onChange={(e) => setCfForm({ ...cfForm, [d.key]: e.target.value })}
+                  >
+                    <option value="">Select…</option>
+                    {d.options.map((o) => (
+                      <option key={o} value={o}>
+                        {o}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type={
+                      d.type === "number"
+                        ? "number"
+                        : d.type === "date"
+                          ? "date"
+                          : "text"
+                    }
+                    value={cfForm[d.key] ?? ""}
+                    onChange={(e) => setCfForm({ ...cfForm, [d.key]: e.target.value })}
+                  />
+                )}
+              </label>
+            ))}
           </div>
           <button className="btn btn-primary" type="submit" disabled={saving}>
             {saving ? "Saving…" : "Create"}
@@ -257,27 +316,41 @@ export function ResourcePage({ config }: { config: ModuleConfig }) {
               {columns.map((c) => (
                 <th key={c.key}>{c.label}</th>
               ))}
+              {rowAction && <th></th>}
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={columns.length} className="muted">
+                <td colSpan={columns.length + (rowAction ? 1 : 0)} className="muted">
                   Loading…
                 </td>
               </tr>
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="muted">
+                <td colSpan={columns.length + (rowAction ? 1 : 0)} className="muted">
                   No records match.
                 </td>
               </tr>
             ) : (
               rows.map((row, i) => (
                 <tr key={(row.id as string) ?? i}>
-                  {columns.map((c) => (
-                    <td key={c.key}>{renderCell(row, c)}</td>
+                  {columns.map((c, ci) => (
+                    <td key={c.key} data-label={c.label}>
+                      {ci === 0 && config.detailPath && row.id ? (
+                        <Link to={`${config.detailPath}/${row.id}`}>
+                          {renderCell(row, c)}
+                        </Link>
+                      ) : (
+                        renderCell(row, c)
+                      )}
+                    </td>
                   ))}
+                  {rowAction && (
+                    <td data-label="" style={{ textAlign: "right" }}>
+                      {rowAction(row)}
+                    </td>
+                  )}
                 </tr>
               ))
             )}
