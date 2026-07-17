@@ -86,7 +86,7 @@ export function Dashboard() {
       label: "Leads due for follow-up",
       value: s?.leads_due_for_follow_up,
       sub: "Reminder date reached, still open",
-      to: "/b2b-leads?due=overdue",
+      to: "/deals?type=b2b&view=list&due=overdue",
       warn: true,
     },
     {
@@ -94,7 +94,7 @@ export function Dashboard() {
       label: "B2G nearing due date",
       value: s?.b2g_opportunities_nearing_due_date,
       sub: `Due within ${b2gDays} days`,
-      to: "/b2g-opportunities?due=soon",
+      to: "/deals?type=b2g&view=list&due=soon",
       warn: true,
     },
   ];
@@ -162,7 +162,7 @@ export function Dashboard() {
         <div className="panel">
           <div className="panel-head">
             <div className="panel-title">Sales pipeline</div>
-            <Link to="/b2b-leads" className="muted" style={{ fontSize: 13 }}>
+            <Link to="/deals?type=b2b&view=board" className="muted" style={{ fontSize: 13 }}>
               View all →
             </Link>
           </div>
@@ -186,7 +186,7 @@ export function Dashboard() {
                 style={{ opacity: 0.35 + (0.65 * (i + 1)) / arr.length }}
               />
               <Link
-                to={`/b2b-leads?status=${encodeURIComponent(r.status)}`}
+                to={`/deals?type=b2b&view=list&status=${encodeURIComponent(r.status)}`}
                 className="pipe-name"
                 style={{ color: "var(--text)" }}
               >

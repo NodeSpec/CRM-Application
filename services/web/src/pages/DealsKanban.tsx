@@ -1,12 +1,19 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { api, ApiError } from "../api/client";
 import { useMeta } from "../lib/useMeta";
-import { Star } from "../components/NeedsData";
+import { Star, DataLegend } from "../components/NeedsData";
+import { ResourcePage } from "./ResourcePage";
+import { MODULES } from "../modules";
 
 /**
- * Unified deal pipeline (REQ-021/022) — reproduces design 3A's Commercial (B2B)
- * / Federal (B2G) toggle. One board, two pipelines:
+ * Unified Deals hub (REQ-021/022) — the single "Deals" destination that replaces
+ * the separate B2B Leads / Pipeline / B2G Opportunities nav items. Two toggles:
+ * a sub-view (Commercial B2B / Federal B2G, per design 3A) and a layout (Board /
+ * List). The List layout reuses the generic ResourcePage (filters/search/CSV/
+ * create) for the underlying module.
+ *
+ * Board layout — one board, two pipelines:
  *   • Commercial: B2B leads by sales status, cards show deal amount.
  *   • Federal: B2G opportunities by capture stage, cards show fit + due date and
  *     link to the capture cockpit. Ceiling value isn't modeled yet (marked *).
@@ -54,7 +61,21 @@ function daysTo(date?: string | null): number | null {
 
 export function DealsKanban() {
   const meta = useMeta();
-  const [mode, setMode] = useState<"b2b" | "b2g">("b2b");
+  const [params, setParams] = useSearchParams();
+  // Sub-view (commercial/federal) and layout (board/list) are URL-driven so the
+  // dashboard and other pages can deep-link straight to a specific view.
+  const mode: "b2b" | "b2g" = params.get("type") === "b2g" ? "b2g" : "b2b";
+  const view: "board" | "list" = params.get("view") === "list" ? "list" : "board";
+  const setMode = (m: "b2b" | "b2g") =>
+    setParams((p) => {
+      p.set("type", m);
+      return p;
+    });
+  const setView = (v: "board" | "list") =>
+    setParams((p) => {
+      p.set("view", v);
+      return p;
+    });
   const [leads, setLeads] = useState<Lead[]>([]);
   const [opps, setOpps] = useState<Opp[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -131,12 +152,13 @@ export function DealsKanban() {
 
   return (
     <>
-      <div className="page-head" style={{ alignItems: "center" }}>
+      <div className="page-head" style={{ alignItems: "center", flexWrap: "wrap", gap: 10 }}>
         <span className="topbar-title" style={{ fontSize: 18 }}>
-          Pipeline
+          Deals
         </span>
         <span className="spacer" />
-        <div className="seg-toggle" role="tablist" aria-label="Pipeline type">
+        {/* Sub-view: commercial (B2B) vs federal (B2G) — design 3A toggle */}
+        <div className="seg-toggle" role="tablist" aria-label="Deal type">
           <button
             className={"seg" + (mode === "b2b" ? " on" : "")}
             onClick={() => setMode("b2b")}
@@ -160,9 +182,46 @@ export function DealsKanban() {
             Federal · B2G
           </button>
         </div>
+        {/* Layout: pipeline board vs filterable list */}
+        <div className="seg-toggle" role="tablist" aria-label="Layout">
+          <button
+            className={"seg" + (view === "board" ? " on" : "")}
+            onClick={() => setView("board")}
+            role="tab"
+            aria-selected={view === "board"}
+            title="Pipeline board"
+          >
+            <span className="material-symbols-rounded" style={{ fontSize: 17 }}>view_kanban</span>
+            Board
+          </button>
+          <button
+            className={"seg" + (view === "list" ? " on" : "")}
+            onClick={() => setView("list")}
+            role="tab"
+            aria-selected={view === "list"}
+            title="Filterable list + CSV export"
+          >
+            <span className="material-symbols-rounded" style={{ fontSize: 17 }}>table_rows</span>
+            List
+          </button>
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 14 }}>
+        <DataLegend />
       </div>
 
       {error && <p className="error">{error}</p>}
+
+      {/* List view reuses the generic ResourcePage (filters, search, CSV, create,
+          custom fields) for the underlying module — one destination, full CRUD. */}
+      {view === "list" ? (
+        <ResourcePage
+          key={mode}
+          config={MODULES[mode === "b2b" ? "b2b-leads" : "b2g-opportunities"]}
+        />
+      ) : (
+        <>
 
       {/* Summary rollups */}
       {mode === "b2b" ? (
@@ -345,6 +404,8 @@ export function DealsKanban() {
             );
           })}
         </div>
+      )}
+        </>
       )}
     </>
   );
