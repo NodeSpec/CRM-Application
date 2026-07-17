@@ -1,183 +1,44 @@
 {
   "modelVersion": 1,
   "generatedBy": "nodespec",
-  "modelHash": "2d95a290ff87f0e8d4dfa32344805d9200d0d45546e934651165e7a54b306ec0",
+  "modelHash": "fbff79dca2efed32a0a5eec235cf66a15f50fac47addbe11d2fe776e80001f97",
   "nodes": [
     {
-      "id": "b1111111-cccc-4ccc-8ccc-111111111111",
-      "type": "frontend-app",
-      "label": "Web App",
-      "technology": "vue",
-      "parentId": "c0000000-dddd-4ddd-8ddd-000000000000",
-      "placementKind": "deployed_to",
-      "ports": [
-        {
-          "id": "251aff94-c4cf-40d1-96c3-43d281927edc",
-          "name": "API Call",
-          "direction": "out"
-        },
-        {
-          "id": "41ea77d9-83c1-4bff-8f17-8b9335992bb3",
-          "name": "Module Dependency",
-          "direction": "out"
-        },
-        {
-          "id": "48eeb138-73e1-48bb-8bbf-9b6857a30285",
-          "name": "Service Import",
-          "direction": "in"
-        },
-        {
-          "id": "f4045144-9f65-4614-8471-efe398706c65",
-          "name": "HTTP In",
-          "direction": "in"
-        }
-      ],
-      "contentHash": "c30607218c9a805ff3d9f5215958acefb1129a1743e9844e014ee0013d8b2b13"
-    },
-    {
-      "id": "b2222222-cccc-4ccc-8ccc-222222222222",
+      "id": "b0000000-0000-4000-8000-000000000a01",
       "type": "backend-service",
-      "label": "CRM API",
-      "technology": "nodejs",
-      "parentId": "c0000000-dddd-4ddd-8ddd-000000000000",
-      "placementKind": "deployed_to",
+      "label": "API Service",
       "ports": [
         {
-          "id": "6556de9c-7bd3-4f2c-9db9-bc89ecb302f6",
-          "name": "HTTP In",
-          "direction": "in"
-        },
-        {
-          "id": "a142eb8d-b120-4ff1-89ef-bcea429e1d4c",
-          "name": "Database",
-          "direction": "out"
-        },
-        {
-          "id": "b4de711c-7cdc-4337-8015-2c5522dc209f",
-          "name": "Service Import",
-          "direction": "in"
-        },
-        {
-          "id": "f69cd6ae-224d-4f2a-b235-d6df2eb15cb5",
-          "name": "Module Dependency",
-          "direction": "out"
-        },
-        {
-          "id": "ff29caab-862f-44e6-8c71-86ef42e233b3",
-          "name": "Cache",
+          "id": "b0000000-0000-4000-8000-000000000f01",
+          "name": "DB queries",
           "direction": "out"
         }
       ],
-      "contentHash": "111da6d46a172b667479e255d715cd77fdfcc61b3925ce7baf84e7dd573e9c87"
+      "contentHash": "77aa304c9490ac587df8acb2bfe36fc44cf3fbf3fa533a407bd1630bda3c30e3"
     },
     {
-      "id": "b3333333-cccc-4ccc-8ccc-333333333333",
+      "id": "b0000000-0000-4000-8000-000000000a02",
       "type": "database",
-      "label": "PostgreSQL",
-      "technology": "postgresql",
-      "parentId": "c0000000-dddd-4ddd-8ddd-000000000000",
-      "placementKind": "deployed_to",
+      "label": "Primary Database",
       "ports": [
         {
-          "id": "89538ec8-d23a-45c5-99eb-fb530e62ebde",
-          "name": "Query",
-          "direction": "in"
-        },
-        {
-          "id": "ece2e84d-2350-4f32-a982-2147982c31c9",
-          "name": "Replication",
-          "direction": "out"
-        }
-      ],
-      "contentHash": "b946bf486d76760c9641035f62fca93785d22e84db80b544258e8c18059b808b"
-    },
-    {
-      "id": "b4444444-cccc-4ccc-8ccc-444444444444",
-      "type": "worker",
-      "label": "Notification Worker",
-      "technology": "nodejs",
-      "parentId": "c0000000-dddd-4ddd-8ddd-000000000000",
-      "placementKind": "deployed_to",
-      "ports": [
-        {
-          "id": "098ee407-b24b-45a3-84b1-3d596473c0c9",
-          "name": "Database",
-          "direction": "out"
-        },
-        {
-          "id": "80e18dac-d75e-484b-a9dd-34a822b5ee81",
-          "name": "Service Import",
-          "direction": "in"
-        },
-        {
-          "id": "8d4461a2-53fc-438d-b218-01838fb1b3f1",
-          "name": "Internal Dependency",
-          "direction": "out"
-        },
-        {
-          "id": "d0a8fc5c-94c0-4c7c-bcd5-8af35314b3d6",
-          "name": "Queue In",
+          "id": "b0000000-0000-4000-8000-000000000f02",
+          "name": "SQL interface",
           "direction": "in"
         }
       ],
-      "contentHash": "fd0b43255ba03581fdece5d1ff838bb252891abe5b93f6be25a1f82ee8dcf8d2"
-    },
-    {
-      "id": "c0000000-dddd-4ddd-8ddd-000000000000",
-      "type": "backend-service",
-      "label": "Docker Compose Stack",
-      "technology": "docker-compose",
-      "ports": [
-        {
-          "id": "21e1df0c-4243-4c3f-9fe3-afc115f16c90",
-          "name": "Module Dependency",
-          "direction": "out"
-        },
-        {
-          "id": "32c45061-752e-40e1-a590-c77e83db3c32",
-          "name": "Cache",
-          "direction": "out"
-        },
-        {
-          "id": "53df63d7-26a9-4961-8434-5a4246fd8c97",
-          "name": "Database",
-          "direction": "out"
-        },
-        {
-          "id": "cd70155b-32a3-4100-a409-1c8469e532c9",
-          "name": "HTTP In",
-          "direction": "in"
-        },
-        {
-          "id": "ef0eb39f-0305-41fc-bda1-ad72380259e3",
-          "name": "Service Import",
-          "direction": "in"
-        }
-      ],
-      "contentHash": "5affdd75c9ba15a9c70ac871f911f4c594fe4e0aa1d163769d8fea8e1f8a5974"
+      "contentHash": "3ebc66b79a41f2cd5ea9d37aa05e6521e6155d438b38fb77b3258bf3a9e6f168"
     }
   ],
   "edges": [
     {
-      "id": "b8888888-cccc-4ccc-8ccc-888888888888",
-      "source": "b1111111-cccc-4ccc-8ccc-111111111111",
-      "target": "b2222222-cccc-4ccc-8ccc-222222222222",
-      "contractId": "b5555555-cccc-4ccc-8ccc-555555555555",
-      "contentHash": "eeea6a63ff3e3e129fcbf2a95ad44254ef655b8baaae1155283acea093f7543c"
-    },
-    {
-      "id": "b9999999-cccc-4ccc-8ccc-999999999999",
-      "source": "b2222222-cccc-4ccc-8ccc-222222222222",
-      "target": "b3333333-cccc-4ccc-8ccc-333333333333",
-      "contractId": "b6666666-cccc-4ccc-8ccc-666666666666",
-      "contentHash": "66d392e2c118860773a415255a0f32eadc996718f5aeb87aa65e0b5d54faf593"
-    },
-    {
-      "id": "baaaaaaa-cccc-4ccc-8ccc-aaaaaaaaaaaa",
-      "source": "b4444444-cccc-4ccc-8ccc-444444444444",
-      "target": "b3333333-cccc-4ccc-8ccc-333333333333",
-      "contractId": "b7777777-cccc-4ccc-8ccc-777777777777",
-      "contentHash": "0bd6287f9cad844f51d6d847aa0636b8a594cda0594b44e87d181a5acf29edd3"
+      "id": "b0000000-0000-4000-8000-000000000e01",
+      "source": "b0000000-0000-4000-8000-000000000a01",
+      "target": "b0000000-0000-4000-8000-000000000a02",
+      "contractId": "b0000000-0000-4000-8000-000000000c01",
+      "sourcePortId": "b0000000-0000-4000-8000-000000000f01",
+      "targetPortId": "b0000000-0000-4000-8000-000000000f02",
+      "contentHash": "7b3daa1daa7e22c2ec60f170cfe3b078ae3afe1747330367e9a709dea582b602"
     }
   ],
   "contracts": [
@@ -186,55 +47,21 @@
       "kind": "sql",
       "name": "Task storage queries",
       "contentHash": "255f67651c68b14403d41e05b487a4810a277ca664f2af0929e111fb1f63dafb"
-    },
-    {
-      "id": "b5555555-cccc-4ccc-8ccc-555555555555",
-      "kind": "rest",
-      "name": "Web-API REST Contract",
-      "contentHash": "210cb4c2e0797c404314f958b1bd57806e82e8a35b981c5f46871eacf7942e9a"
-    },
-    {
-      "id": "b6666666-cccc-4ccc-8ccc-666666666666",
-      "kind": "sql",
-      "name": "API-DB SQL Contract",
-      "contentHash": "7a2aec5e74415c59a7199077b013d4e1d5691c186c9acbc7c243b19b124f4162"
-    },
-    {
-      "id": "b7777777-cccc-4ccc-8ccc-777777777777",
-      "kind": "sql",
-      "name": "Worker-DB SQL Contract",
-      "contentHash": "a59cf77b90825cb4cc6b0914c321fa265bf6a327730e48b5c699cf70c3f3a83a"
     }
   ],
-  "artifacts": [
-    {
-      "id": "8b928342-1a00-4a5c-abee-cef9eb875342",
-      "nodeId": "b4444444-cccc-4ccc-8ccc-444444444444",
-      "path": "tasktest.md",
-      "kind": "doc",
-      "contentHash": "0000000000000000"
-    },
-    {
-      "id": "c1111111-dddd-4ddd-8ddd-111111111111",
-      "nodeId": "c0000000-dddd-4ddd-8ddd-000000000000",
-      "path": "docker-compose.yml",
-      "kind": "config"
-    }
-  ],
+  "artifacts": [],
   "mappings": [
     {
-      "requirementId": "REQ-003",
+      "requirementId": "REQ-001",
       "nodeIds": [
-        "b1111111-cccc-4ccc-8ccc-111111111111",
-        "b4444444-cccc-4ccc-8ccc-444444444444"
+        "b0000000-0000-4000-8000-000000000a01",
+        "b0000000-0000-4000-8000-000000000a02"
       ]
     },
     {
-      "requirementId": "REQ-007",
+      "requirementId": "REQ-002",
       "nodeIds": [
-        "b2222222-cccc-4ccc-8ccc-222222222222",
-        "b3333333-cccc-4ccc-8ccc-333333333333",
-        "c0000000-dddd-4ddd-8ddd-000000000000"
+        "b0000000-0000-4000-8000-000000000a01"
       ]
     }
   ]

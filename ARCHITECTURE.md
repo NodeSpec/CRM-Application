@@ -7,23 +7,11 @@ component inventory, connection topology, and links to per-component task docume
 
 | Component | Role | Technology | Parent | Task Document | Test Plan |
 |-----------|------|------------|--------|---------------|-----------|
-| Web App | frontend-app | vue | Docker Compose Stack | --- | --- |
-| CRM API | backend-service | nodejs | Docker Compose Stack | --- | --- |
-| PostgreSQL | database | postgresql | Docker Compose Stack | --- | --- |
-| Notification Worker | worker | nodejs | Docker Compose Stack | --- | --- |
-
-## Containment Hierarchy
-
-- **Docker Compose Stack** [docker-compose] (backend-service)
-  - **Web App** [vue] (frontend-app)
-  - **CRM API** [nodejs] (backend-service)
-  - **PostgreSQL** [postgresql] (database)
-  - **Notification Worker** [nodejs] (worker)
+| API Service | backend-service | --- | --- | --- | --- |
+| Primary Database | database | --- | --- | --- | --- |
 
 ## Connection Topology
 
 | Source | Target | Protocol | Contract |
 |--------|--------|----------|----------|
-| Web App | CRM API | rest | Web-API REST Contract |
-| CRM API | PostgreSQL | sql | API-DB SQL Contract |
-| Notification Worker | PostgreSQL | sql | Worker-DB SQL Contract |
+| API Service | Primary Database | sql | Task storage queries |
