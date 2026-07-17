@@ -100,3 +100,8 @@ it only seeds data into empty config tabs.
   leftover `type="module"` / `crossorigin` / `modulepreload`. If you change the
   build, keep it a classic script. The entry (`gasMain.tsx`) also renders any
   startup error into `#root` instead of leaving the page blank.
+- **Why the bundle is pure ASCII:** Apps Script's editor/serving can corrupt
+  multibyte characters (emoji like 👋, `·`, `—`), which the browser then reports
+  as `Uncaught SyntaxError: Invalid or unexpected token`. The build emits
+  ASCII-only JS (`esbuild.charset: "ascii"`) so every non-ASCII character is a
+  `\uXXXX` escape and cannot be mangled in transit.

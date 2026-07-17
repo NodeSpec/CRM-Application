@@ -35,6 +35,10 @@ export default defineConfig({
   resolve: {
     alias: { "@web": coreSrc },
   },
+  // Emit ASCII-only JS (escape emoji/·/→ etc. to \uXXXX). Apps Script's editor
+  // and serving can corrupt multibyte characters, which shows up in the browser
+  // as "Uncaught SyntaxError: Invalid or unexpected token".
+  esbuild: { charset: "ascii" },
   build: {
     outDir: path.resolve(dir, "dist"),
     sourcemap: false,
