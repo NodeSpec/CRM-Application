@@ -102,6 +102,16 @@ export function Company360() {
   const [editSocial, setEditSocial] = useState(false);
   const [socialForm, setSocialForm] = useState<SocialLinks>({});
   const [savingSocial, setSavingSocial] = useState(false);
+  const [comps, setComps] = useState<{ id: string; name: string; note?: string; disposition?: string }[]>([]);
+  const [compForm, setCompForm] = useState<Record<string, string>>({});
+
+  const loadComps = useCallback(() => {
+    if (!id) return;
+    api
+      .list<{ id: string; name: string; note?: string; disposition?: string }>("company-competitors", { company_id: id })
+      .then(setComps)
+      .catch(() => {});
+  }, [id]);
 
   const loadActs = useCallback(() => {
     if (!id) return;
@@ -132,7 +142,33 @@ export function Company360() {
     api.list<Contact>("contacts", { company_id: id }).then(setContacts).catch(() => {});
     loadActs();
     loadFeed();
-  }, [id, loadActs, loadFeed]);
+    loadComps();
+  }, [id, loadActs, loadFeed, loadComps]);
+
+  async function addCompetitor(e: FormEvent) {
+    e.preventDefault();
+    if (!compForm.name?.trim() || !id) return;
+    try {
+      await api.create("company-competitors", {
+        company_id: id,
+        name: compForm.name.trim(),
+        note: compForm.note ?? "",
+        disposition: compForm.disposition || "watch",
+      });
+      setCompForm({});
+      loadComps();
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+  async function removeCompetitor(cid: string) {
+    try {
+      await api.remove("company-competitors", cid);
+      loadComps();
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
 
   const ownerName = (oid?: string | null) =>
     meta?.owners.find((o) => o.id === oid)?.display_name ?? "";
@@ -322,6 +358,38 @@ export function Company360() {
               <div><div className="dtl-label">Customer since<Star note="No first-close / customer-since date captured" /></div><div className="dtl-val muted">—</div></div>
             </div>
             {company.about && <p className="muted" style={{ marginBottom: 0 }}>{company.about}</p>}
+          </div>
+
+          {/* Competition — a company-level attribute surfaced in commercial deals */}
+          <div className="panel">
+            <div className="icon-title"><span className="material-symbols-rounded">swords</span>Competition</div>
+            {comps.map((c) => {
+              const k = (c.disposition ?? "watch").toLowerCase();
+              const color = k === "threat" ? "var(--warn)" : k === "leading" ? "var(--pos)" : k === "low" ? "var(--text-3)" : "var(--text-2)";
+              return (
+                <div className="comp-row" key={c.id}>
+                  <span className="comp-tag">ALT</span>
+                  <span style={{ fontSize: 13.5, fontWeight: 600, flex: 1 }}>{c.name}</span>
+                  <span className="muted" style={{ fontSize: 12.5, flex: 1, minWidth: 0 }}>{c.note}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color, width: 60, textAlign: "right", textTransform: "capitalize" }}>{k}</span>
+                  <button className="icon-btn" style={{ width: 26, height: 26 }} title="Remove" onClick={() => removeCompetitor(c.id)}>
+                    <span className="material-symbols-rounded" style={{ fontSize: 15 }}>close</span>
+                  </button>
+                </div>
+              );
+            })}
+            {comps.length === 0 && <p className="muted" style={{ fontSize: 12.5 }}>No competitors tracked.</p>}
+            <form onSubmit={addCompetitor} style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
+              <input placeholder="Competitor" value={compForm.name ?? ""} onChange={(e) => setCompForm({ ...compForm, name: e.target.value })} />
+              <input placeholder="Note" value={compForm.note ?? ""} onChange={(e) => setCompForm({ ...compForm, note: e.target.value })} style={{ flex: 1, minWidth: 120 }} />
+              <select value={compForm.disposition ?? "watch"} onChange={(e) => setCompForm({ ...compForm, disposition: e.target.value })}>
+                <option value="threat">Threat</option>
+                <option value="watch">Watch</option>
+                <option value="low">Low</option>
+                <option value="leading">Leading</option>
+              </select>
+              <button className="btn" type="submit">Add</button>
+            </form>
           </div>
         </div>
 

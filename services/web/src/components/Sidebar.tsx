@@ -13,9 +13,9 @@ interface NavItem {
 
 const NAV: NavItem[] = [
   { to: "/", label: "Dashboard", icon: "space_dashboard", end: true },
-  // Deals consolidates the commercial (B2B) and federal (B2G) pipelines into one
-  // destination with in-page sub-views (design 3A's Commercial/Federal toggle).
-  { to: "/deals", label: "Deals", icon: "handshake" },
+  // Pipeline consolidates the commercial (B2B) and federal (B2G) pipelines into
+  // one destination with in-page sub-views (design 3A's Commercial/Federal toggle).
+  { to: "/deals", label: "Pipeline", icon: "handshake" },
   { to: "/companies", label: "Companies", icon: "apartment" },
   { to: "/contacts", label: "Contacts", icon: "person" },
   { to: "/events", label: "Events", icon: "event" },

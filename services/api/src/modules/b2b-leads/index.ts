@@ -25,6 +25,9 @@ export const b2bLeadSchema = z.object({
   owner_id: z.string().uuid().optional(),
   company_id: z.string().uuid().optional(),
   contact_id: z.string().uuid().optional(),
+  // Commercial deal depth (REQ-021): MEDDIC qualification + win probability.
+  meddic: z.record(z.unknown()).optional(),
+  probability: z.number().int().min(0).max(100).optional(),
   custom_fields: z.record(z.unknown()).optional(),
 });
 
@@ -50,8 +53,10 @@ export const b2bLeadsRouter = makeCrudRouter({
     "owner_id",
     "company_id",
     "contact_id",
+    "meddic",
+    "probability",
     "custom_fields",
   ],
   searchable: ["company_name", "primary_poc", "notes"],
-  jsonColumns: ["custom_fields"],
+  jsonColumns: ["meddic", "custom_fields"],
 });

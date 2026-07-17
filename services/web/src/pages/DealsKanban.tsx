@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { api, ApiError } from "../api/client";
 import { useMeta } from "../lib/useMeta";
 import { Star, DataLegend } from "../components/NeedsData";
@@ -79,6 +79,10 @@ export function DealsKanban() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [opps, setOpps] = useState<Opp[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const [creating, setCreating] = useState(false);
+  const [newForm, setNewForm] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
 
   const load = useCallback(() => {
     api
@@ -121,6 +125,38 @@ export function DealsKanban() {
     }
   }
 
+  /** Create a new deal in the active pipeline and open its detail view. */
+  async function createDeal(e: FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      if (mode === "b2b") {
+        if (!newForm.company_name?.trim()) return;
+        const body: Record<string, unknown> = {
+          company_name: newForm.company_name.trim(),
+          status: newForm.status || (meta?.lead_statuses[0]?.label ?? "New"),
+        };
+        if (newForm.amount?.trim()) body.amount = Number(newForm.amount);
+        if (newForm.close_date) body.close_date = newForm.close_date;
+        if (newForm.owner_id) body.owner_id = newForm.owner_id;
+        const created = await api.create<{ id: string }>("b2b-leads", body);
+        navigate(`/b2b-leads/${created.id}`);
+      } else {
+        if (!newForm.notice_id?.trim()) return;
+        const body: Record<string, unknown> = { notice_id: newForm.notice_id.trim() };
+        if (newForm.agency_department?.trim()) body.agency_department = newForm.agency_department.trim();
+        if (newForm.due_date) body.due_date = newForm.due_date;
+        if (newForm.capture_stage) body.capture_stage = newForm.capture_stage;
+        const created = await api.create<{ id: string }>("b2g-opportunities", body);
+        navigate(`/b2g-opportunities/${created.id}`);
+      }
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   const leadStages = meta?.lead_statuses ?? [];
   // Federal columns: only prepend "Unstaged" if some record lands there.
   const oppStageOf = (o: Opp) =>
@@ -154,7 +190,7 @@ export function DealsKanban() {
     <>
       <div className="page-head" style={{ alignItems: "center", flexWrap: "wrap", gap: 10 }}>
         <span className="topbar-title" style={{ fontSize: 18 }}>
-          Deals
+          Pipeline
         </span>
         <span className="spacer" />
         {/* Sub-view: commercial (B2B) vs federal (B2G) — design 3A toggle */}
@@ -205,6 +241,16 @@ export function DealsKanban() {
             List
           </button>
         </div>
+        <button
+          className="btn btn-primary"
+          onClick={() => {
+            setNewForm({});
+            setCreating(true);
+          }}
+        >
+          <span className="material-symbols-rounded" style={{ fontSize: 17, verticalAlign: "-3px", marginRight: 4 }}>add</span>
+          New {mode === "b2b" ? "deal" : "opportunity"}
+        </button>
       </div>
 
       <div style={{ marginBottom: 14 }}>
@@ -282,7 +328,9 @@ export function DealsKanban() {
                 </div>
                 {col.map((l) => (
                   <div className="kanban-card" key={l.id}>
-                    <div className="kanban-card-title">{l.company_name}</div>
+                    <Link to={`/b2b-leads/${l.id}`} className="kanban-card-title" style={{ color: "var(--text)" }}>
+                      {l.company_name}
+                    </Link>
                     <div className="tnum kanban-card-amt">
                       {money(l.amount) || "—"}
                     </div>
@@ -406,6 +454,67 @@ export function DealsKanban() {
         </div>
       )}
         </>
+      )}
+
+      {creating && (
+        <div className="modal-overlay" onClick={() => setCreating(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <div style={{ fontWeight: 700, fontSize: 15.5 }}>
+                New {mode === "b2b" ? "commercial deal" : "federal opportunity"}
+              </div>
+              <button className="icon-btn" onClick={() => setCreating(false)} aria-label="Close">
+                <span className="material-symbols-rounded">close</span>
+              </button>
+            </div>
+            <form className="modal-body" onSubmit={createDeal}>
+              {mode === "b2b" ? (
+                <>
+                  <label className="acq-field"><span className="dtl-label">Company *</span>
+                    <input required value={newForm.company_name ?? ""} onChange={(e) => setNewForm({ ...newForm, company_name: e.target.value })} /></label>
+                  <div className="form-grid">
+                    <label className="acq-field"><span className="dtl-label">Contract value</span>
+                      <input type="number" value={newForm.amount ?? ""} onChange={(e) => setNewForm({ ...newForm, amount: e.target.value })} /></label>
+                    <label className="acq-field"><span className="dtl-label">Close date</span>
+                      <input type="date" value={newForm.close_date ?? ""} onChange={(e) => setNewForm({ ...newForm, close_date: e.target.value })} /></label>
+                    <label className="acq-field"><span className="dtl-label">Stage</span>
+                      <select value={newForm.status ?? ""} onChange={(e) => setNewForm({ ...newForm, status: e.target.value })}>
+                        <option value="">—</option>
+                        {(meta?.lead_statuses ?? []).map((s) => <option key={s.label} value={s.label}>{s.label}</option>)}
+                      </select></label>
+                    <label className="acq-field"><span className="dtl-label">Owner</span>
+                      <select value={newForm.owner_id ?? ""} onChange={(e) => setNewForm({ ...newForm, owner_id: e.target.value })}>
+                        <option value="">—</option>
+                        {(meta?.owners ?? []).map((o) => <option key={o.id} value={o.id}>{o.display_name || o.email}</option>)}
+                      </select></label>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <label className="acq-field"><span className="dtl-label">Notice ID *</span>
+                    <input required value={newForm.notice_id ?? ""} onChange={(e) => setNewForm({ ...newForm, notice_id: e.target.value })} /></label>
+                  <div className="form-grid">
+                    <label className="acq-field"><span className="dtl-label">Agency</span>
+                      <input value={newForm.agency_department ?? ""} onChange={(e) => setNewForm({ ...newForm, agency_department: e.target.value })} /></label>
+                    <label className="acq-field"><span className="dtl-label">Due date</span>
+                      <input type="date" value={newForm.due_date ?? ""} onChange={(e) => setNewForm({ ...newForm, due_date: e.target.value })} /></label>
+                    <label className="acq-field"><span className="dtl-label">Capture stage</span>
+                      <select value={newForm.capture_stage ?? ""} onChange={(e) => setNewForm({ ...newForm, capture_stage: e.target.value })}>
+                        <option value="">—</option>
+                        {CAPTURE_STAGES.map((s) => <option key={s} value={s}>{s}</option>)}
+                      </select></label>
+                  </div>
+                </>
+              )}
+              <div style={{ display: "flex", gap: 8 }}>
+                <button className="btn btn-primary" type="submit" disabled={saving}>
+                  {saving ? "Creating…" : "Create & open"}
+                </button>
+                <button className="btn" type="button" onClick={() => setCreating(false)}>Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </>
   );

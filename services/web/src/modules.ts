@@ -58,6 +58,7 @@ export const MODULES: Record<string, ModuleConfig> = {
     resource: "b2b-leads",
     description: "Search, filter and manage B2B leads (REQ-004/005/006).",
     searchable: true,
+    detailPath: "/b2b-leads",
     columns: [
       { key: "company_name", label: "Company" },
       { key: "industry_vertical", label: "Industry" },

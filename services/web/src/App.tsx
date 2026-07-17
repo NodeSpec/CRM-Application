@@ -11,6 +11,7 @@ import { DealsKanban } from "./pages/DealsKanban";
 import { Company360 } from "./pages/Company360";
 import { ContactDetail } from "./pages/ContactDetail";
 import { B2GCaptureView } from "./pages/B2GCaptureView";
+import { B2BDealView } from "./pages/B2BDealView";
 import { CategoriesAdmin } from "./pages/admin/CategoriesAdmin";
 import { UsersAdmin } from "./pages/admin/UsersAdmin";
 import { AuditAdmin } from "./pages/admin/AuditAdmin";
@@ -78,6 +79,7 @@ export default function App() {
               );
             })}
             <Route path="/deals" element={<DealsKanban />} />
+            <Route path="/b2b-leads/:id" element={<B2BDealView />} />
             <Route path="/companies/:id" element={<Company360 />} />
             <Route path="/contacts/:id" element={<ContactDetail />} />
             <Route

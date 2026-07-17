@@ -1136,6 +1136,83 @@ tbody tr:hover {
   vertical-align: -3px;
   margin-right: 4px;
 }
+
+/* ---- Commercial (B2B) deal view (design 3A commercial) ----------------- */
+.econ-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-top: 15px;
+}
+.econ-cell {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 13px;
+}
+.econ-val {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  margin-top: 4px;
+}
+.comp-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+.comp-row:first-of-type {
+  border-top: none;
+}
+.comp-tag {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--surface-3);
+  color: var(--text-2);
+  flex: 0 0 auto;
+}
+.comp-tag.us {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+.prob-ring {
+  position: relative;
+  width: 66px;
+  height: 66px;
+  flex: 0 0 66px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+.prob-hole {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--surface);
+  display: grid;
+  place-items: center;
+}
+.task-check {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  border-radius: 6px;
+  border: 2px solid var(--border-strong);
+  background: transparent;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+@media (max-width: 860px) {
+  .econ-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
 .team-row {
   display: flex;
   align-items: center;
