@@ -7,70 +7,23 @@ component inventory, connection topology, and links to per-component task docume
 
 | Component | Role | Technology | Parent | Task Document | Test Plan |
 |-----------|------|------------|--------|---------------|-----------|
-| CRM API | backend-service | nodejs | CRM Platform | [`.nodespec/tasks/crm-api.task.md`](./.nodespec/tasks/crm-api.task.md) | [`.nodespec/tests/req-015-environment-based-configuration.tests.md`](./.nodespec/tests/req-015-environment-based-configuration.tests.md) |
-| Session Store | cache | redis | CRM Platform | [`.nodespec/tasks/session-store.task.md`](./.nodespec/tasks/session-store.task.md) | --- |
-| CRM Web App | frontend-app | react | CRM Platform | [`.nodespec/tasks/crm-web-app.task.md`](./.nodespec/tasks/crm-web-app.task.md) | [`.nodespec/tests/req-016-api-first-backend-design.tests.md`](./.nodespec/tests/req-016-api-first-backend-design.tests.md) |
-| Identity Provider | auth-provider | keycloak | CRM Platform | [`.nodespec/tasks/identity-provider.task.md`](./.nodespec/tasks/identity-provider.task.md) | [`.nodespec/tests/req-001-pluggable-identity-provider-authentication.tests.md`](./.nodespec/tests/req-001-pluggable-identity-provider-authentication.tests.md) |
-| CRM Database | database | postgresql | CRM Platform | [`.nodespec/tasks/crm-database.task.md`](./.nodespec/tasks/crm-database.task.md) | [`.nodespec/tests/req-017-data-persistence-schema-migrations.tests.md`](./.nodespec/tests/req-017-data-persistence-schema-migrations.tests.md) |
-| Reverse Proxy | load-balancer | nginx | Docker Compose Stack | [`.nodespec/tasks/reverse-proxy.task.md`](./.nodespec/tasks/reverse-proxy.task.md) | --- |
+| Web App | frontend-app | vue | Docker Compose Stack | --- | --- |
+| CRM API | backend-service | nodejs | Docker Compose Stack | --- | --- |
+| PostgreSQL | database | postgresql | Docker Compose Stack | --- | --- |
+| Notification Worker | worker | nodejs | Docker Compose Stack | --- | --- |
 
 ## Containment Hierarchy
 
-- **Docker Compose Stack** [docker] (docker-compose)
-  - **CRM Platform** (application-module)
-    - **CRM API** [nodejs] (backend-service)
-    - **Session Store** [redis] (cache)
-    - **CRM Web App** [react] (frontend-app)
-    - **Identity Provider** [keycloak] (auth-provider)
-    - **CRM Database** [postgresql] (database)
-  - **Reverse Proxy** [nginx] (load-balancer)
+- **Docker Compose Stack** [docker-compose] (backend-service)
+  - **Web App** [vue] (frontend-app)
+  - **CRM API** [nodejs] (backend-service)
+  - **PostgreSQL** [postgresql] (database)
+  - **Notification Worker** [nodejs] (worker)
 
 ## Connection Topology
 
 | Source | Target | Protocol | Contract |
 |--------|--------|----------|----------|
-| CRM API | Identity Provider | rest | OIDC/SAML Token Verification |
-| Reverse Proxy | CRM API | rest | Proxy to API (/api/v1) |
-| Reverse Proxy | Identity Provider | rest | Proxy to IdP (/auth) |
-| CRM Web App | Identity Provider | rest | OIDC Login Redirect |
-| CRM API | Session Store | sql | Session & Revocation Store |
-| CRM Web App | Reverse Proxy | rest | Browser HTTPS |
-| CRM API | CRM Database | sql | CRM Persistence |
-
-## Task Documents
-
-Each component has a task document containing the full implementation context:
-requirements, contracts, technology guidance, and connected components.
-Use these as the primary brief when implementing or modifying a component.
-
-- **Docker Compose Stack**: [`.nodespec/tasks/docker-compose-stack.task.md`](./.nodespec/tasks/docker-compose-stack.task.md)
-- **Identity Provider**: [`.nodespec/tasks/identity-provider.task.md`](./.nodespec/tasks/identity-provider.task.md)
-- **Session Store**: [`.nodespec/tasks/session-store.task.md`](./.nodespec/tasks/session-store.task.md)
-- **CRM Database**: [`.nodespec/tasks/crm-database.task.md`](./.nodespec/tasks/crm-database.task.md)
-- **CRM API**: [`.nodespec/tasks/crm-api.task.md`](./.nodespec/tasks/crm-api.task.md)
-- **CRM Web App**: [`.nodespec/tasks/crm-web-app.task.md`](./.nodespec/tasks/crm-web-app.task.md)
-- **Reverse Proxy**: [`.nodespec/tasks/reverse-proxy.task.md`](./.nodespec/tasks/reverse-proxy.task.md)
-
-## Test Plans
-
-Each requirement has a test plan documenting acceptance criteria assessments,
-recommended test types, framework suggestions, and test scenarios.
-
-- **CRM API**: [`.nodespec/tests/req-015-environment-based-configuration.tests.md`](./.nodespec/tests/req-015-environment-based-configuration.tests.md)
-- **CRM API**: [`.nodespec/tests/req-018-audit-logging.tests.md`](./.nodespec/tests/req-018-audit-logging.tests.md)
-- **CRM API**: [`.nodespec/tests/req-014-container-based-deployment.tests.md`](./.nodespec/tests/req-014-container-based-deployment.tests.md)
-- **CRM API**: [`.nodespec/tests/req-009-event-record-management.tests.md`](./.nodespec/tests/req-009-event-record-management.tests.md)
-- **CRM API**: [`.nodespec/tests/req-011-submission-category-management.tests.md`](./.nodespec/tests/req-011-submission-category-management.tests.md)
-- **CRM API**: [`.nodespec/tests/req-012-publicity-contact-record-management.tests.md`](./.nodespec/tests/req-012-publicity-contact-record-management.tests.md)
-- **CRM API**: [`.nodespec/tests/req-010-submission-record-management.tests.md`](./.nodespec/tests/req-010-submission-record-management.tests.md)
-- **CRM API**: [`.nodespec/tests/req-003-session-management-security.tests.md`](./.nodespec/tests/req-003-session-management-security.tests.md)
-- **CRM API**: [`.nodespec/tests/req-007-b2g-opportunity-record-management.tests.md`](./.nodespec/tests/req-007-b2g-opportunity-record-management.tests.md)
-- **CRM API**: [`.nodespec/tests/req-006-b2b-lead-filtering-search-export.tests.md`](./.nodespec/tests/req-006-b2b-lead-filtering-search-export.tests.md)
-- **CRM API**: [`.nodespec/tests/req-004-b2b-lead-record-management.tests.md`](./.nodespec/tests/req-004-b2b-lead-record-management.tests.md)
-- **CRM Database**: [`.nodespec/tests/req-017-data-persistence-schema-migrations.tests.md`](./.nodespec/tests/req-017-data-persistence-schema-migrations.tests.md)
-- **CRM Web App**: [`.nodespec/tests/req-016-api-first-backend-design.tests.md`](./.nodespec/tests/req-016-api-first-backend-design.tests.md)
-- **CRM API**: [`.nodespec/tests/req-008-b2g-opportunity-filtering-due-date-alerts.tests.md`](./.nodespec/tests/req-008-b2g-opportunity-filtering-due-date-alerts.tests.md)
-- **Identity Provider**: [`.nodespec/tests/req-001-pluggable-identity-provider-authentication.tests.md`](./.nodespec/tests/req-001-pluggable-identity-provider-authentication.tests.md)
-- **CRM API**: [`.nodespec/tests/req-005-b2b-lead-status-follow-up-workflow.tests.md`](./.nodespec/tests/req-005-b2b-lead-status-follow-up-workflow.tests.md)
-- **CRM API**: [`.nodespec/tests/req-013-unified-dashboard-cross-module-summary.tests.md`](./.nodespec/tests/req-013-unified-dashboard-cross-module-summary.tests.md)
-- **CRM API**: [`.nodespec/tests/req-002-role-based-access-control.tests.md`](./.nodespec/tests/req-002-role-based-access-control.tests.md)
+| Web App | CRM API | rest | Web-API REST Contract |
+| CRM API | PostgreSQL | sql | API-DB SQL Contract |
+| Notification Worker | PostgreSQL | sql | Worker-DB SQL Contract |
