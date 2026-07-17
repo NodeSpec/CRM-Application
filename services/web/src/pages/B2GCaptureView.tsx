@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { useParams, Link } from "react-router-dom";
 import { api } from "../api/client";
 import { Star, DataLegend } from "../components/NeedsData";
@@ -146,6 +146,13 @@ export function B2GCaptureView() {
   const [teaming, setTeaming] = useState<Row[]>([]);
   const [stakeholders, setStakeholders] = useState<Row[]>([]);
   const [gates, setGates] = useState<Row[]>([]);
+  // Ref mirror of `gates` — a reliable "latest" source for optimistic gate edits
+  // (useState functional updaters don't run synchronously, so we can't read the
+  // merged value back inline).
+  const gatesRef = useRef<Row[]>([]);
+  useEffect(() => {
+    gatesRef.current = gates;
+  }, [gates]);
   const [error, setError] = useState<string | null>(null);
   const [editAcq, setEditAcq] = useState(false);
   const [acqForm, setAcqForm] = useState<Record<string, string>>({});
@@ -214,19 +221,29 @@ export function B2GCaptureView() {
     }
   }
 
-  /** Persist a change to one gate (Good/Gap flag or its detail text). Optimistic
-   *  so the toggle reflects instantly and is not subject to refetch ordering. */
-  async function patchGate(g: Row, patch: { met?: boolean; status?: string }) {
+  /**
+   * Persist a change to one gate (Good/Gap flag or its detail text). Reads the
+   * latest gate from state (not a stale closure) so a Good/Gap click and a detail
+   * blur can't clobber each other, updates optimistically, and does NOT refetch on
+   * success (refetching was reverting the change). Reconciles only on error.
+   */
+  async function patchGate(gateId: string, patch: { met?: boolean; status?: string }) {
     if (!opp) return;
-    setGates((gs) => gs.map((x) => (x.id === g.id ? { ...x, ...patch } : x)));
+    const cur = gatesRef.current.find((x) => String(x.id) === gateId);
+    if (!cur) return;
+    const merged: Row = { ...cur, ...patch };
+    // Optimistic write to both the ref (latest source) and state (render).
+    gatesRef.current = gatesRef.current.map((x) =>
+      String(x.id) === gateId ? merged : x
+    );
+    setGates(gatesRef.current);
     try {
-      await api.update("b2g-compliance-gates", g.id as string, {
+      await api.update("b2g-compliance-gates", gateId, {
         opportunity_id: opp.id,
-        label: String(g.label),
-        status: patch.status ?? String(g.status ?? ""),
-        met: patch.met ?? g.met === true,
+        label: String(merged.label),
+        status: String(merged.status ?? ""),
+        met: merged.met === true,
       });
-      loadSubs();
     } catch (e) {
       setError((e as Error).message);
       loadSubs(); // reconcile back to server truth on failure
@@ -417,28 +434,31 @@ export function B2GCaptureView() {
                         defaultValue={String(g.status ?? "")}
                         onBlur={(e) => {
                           const v = e.target.value;
-                          if (v !== String(g.status ?? "")) patchGate(g, { status: v });
+                          if (v !== String(g.status ?? "")) patchGate(String(g.id), { status: v });
                         }}
                       />
                     </div>
                     {/* Good / Gap toggle */}
                     <div className="gg-toggle">
                       <button
+                        type="button"
                         className={"gg good" + (ok ? " on" : "")}
-                        onClick={() => patchGate(g, { met: true })}
+                        onClick={() => patchGate(String(g.id), { met: true })}
                         title="Requirement met"
                       >
                         Good
                       </button>
                       <button
+                        type="button"
                         className={"gg gap" + (!ok ? " on" : "")}
-                        onClick={() => patchGate(g, { met: false })}
+                        onClick={() => patchGate(String(g.id), { met: false })}
                         title="Gap — not yet met"
                       >
                         Gap
                       </button>
                     </div>
                     <button
+                      type="button"
                       className="icon-btn"
                       style={{ width: 28, height: 28 }}
                       title="Remove gate"
