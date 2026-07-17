@@ -7,14 +7,14 @@ component inventory, connection topology, and links to per-component task docume
 
 | Component | Role | Technology | Parent | Task Document | Test Plan |
 |-----------|------|------------|--------|---------------|-----------|
-| Web App | frontend-app | vue | Docker Compose Stack | --- | --- |
-| CRM API | backend-service | nodejs | Docker Compose Stack | --- | --- |
-| PostgreSQL | database | postgresql | Docker Compose Stack | --- | --- |
-| Notification Worker | worker | nodejs | Docker Compose Stack | --- | --- |
+| Web App | frontend-app | vue | Docker | --- | --- |
+| CRM API | backend-service | nodejs | Docker | --- | --- |
+| PostgreSQL | database | postgresql | Docker | --- | --- |
+| Notification Worker | worker | nodejs | Docker | --- | --- |
 
 ## Containment Hierarchy
 
-- **Docker Compose Stack** [docker-compose] (backend-service)
+- **Docker** [docker] (runtime.docker-container)
   - **Web App** [vue] (frontend-app)
   - **CRM API** [nodejs] (backend-service)
   - **PostgreSQL** [postgresql] (database)
