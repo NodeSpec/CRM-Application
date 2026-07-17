@@ -150,6 +150,89 @@ files) — no secrets are baked into images. The API validates required
 variables at startup and **fails fast** with a descriptive error if any are
 missing. See `.env.example` for the full list.
 
+## Outbound internet & egress configuration (REQ-026)
+
+Inbound traffic (browser → app) enters through the nginx reverse proxy. This
+section is about the **other direction** — letting the API reach the internet so
+integrations like the Company 360 social feed (LinkedIn / X / Instagram /
+TikTok) can call third-party APIs. In a hardened cloud network, containers have
+**no route to the internet by default**, so this is a deliberate step.
+
+**Two layers to configure:**
+
+1. **Network route** — the host/subnet must be able to reach the internet
+   (NAT gateway, internet gateway, or Cloud NAT — see per-environment notes).
+2. **Application egress** — per REQ-026 the app never calls third-party hosts
+   directly. Point it at your egress gateway and supply per-provider credentials
+   (all optional; unset means the feature stays inert and reports "not
+   connected" — it never fabricates data):
+
+   ```bash
+   # in .env (see .env.example)
+   SOCIAL_EGRESS_BASE_URL=https://egress.internal   # your allowlisting gateway
+   SOCIAL_LINKEDIN_TOKEN=...                          # per-platform API creds
+   SOCIAL_X_TOKEN=...
+   SOCIAL_INSTAGRAM_TOKEN=...
+   SOCIAL_TIKTOK_TOKEN=...
+   ```
+
+   Store the tokens in a secrets manager (below), not in the repo. The egress
+   gateway owns the host allowlist, credential injection, and rate limiting so
+   those concerns don't sprawl into app code.
+
+### Desktop / single host (Docker Compose on a laptop or office server)
+
+- Docker's default bridge network already NATs outbound traffic through the
+  host, so containers reach the internet with **no extra setup** — provided the
+  host itself has internet access.
+- **Behind a corporate proxy?** Add the standard proxy variables to the `api`
+  service environment (and the Docker daemon) so outbound calls traverse it:
+  ```bash
+  HTTP_PROXY=http://proxy.corp:3128
+  HTTPS_PROXY=http://proxy.corp:3128
+  NO_PROXY=localhost,127.0.0.1,db,redis,keycloak,proxy
+  ```
+  Keep internal service names in `NO_PROXY` so intra-stack traffic stays local.
+- If you don't run an egress gateway, leave `SOCIAL_EGRESS_BASE_URL` empty — the
+  social feed shows the honest "connect a platform API" state and makes no
+  outbound calls.
+
+### AWS (ECS/EKS/EC2 in a VPC)
+
+- **Private subnets (recommended):** create a **NAT Gateway** in a public subnet
+  and add `0.0.0.0/0 → nat-…` to the private subnets' route table. Tasks keep no
+  public IP; outbound still works.
+- **Public subnets:** attach an **Internet Gateway** and route `0.0.0.0/0 → igw-…`;
+  tasks need a public IP (`assignPublicIp: ENABLED` for Fargate).
+- **Security groups** are stateful and allow all egress by default; if you've
+  restricted it, allow `:443` to the egress gateway / platform endpoints.
+- **Locking egress down:** front outbound traffic with **AWS Network Firewall**
+  or a Squid forward proxy configured with a domain allowlist for the social
+  hosts, then set `SOCIAL_EGRESS_BASE_URL` (or `HTTPS_PROXY`) to it.
+- **Secrets:** keep `SOCIAL_*_TOKEN` in **Secrets Manager** or **SSM Parameter
+  Store** and inject them as task-definition `secrets` (never plaintext env).
+
+### GCP (GCE/GKE/Cloud Run)
+
+- **Private nodes / no external IP (recommended):** enable **Cloud NAT** on the
+  subnet's region so instances and GKE pods get outbound internet without public
+  IPs.
+- **Instances with an external IP** egress directly, subject to firewall rules.
+- **Cloud Run:** reaches the internet by default. If you attach a **Serverless
+  VPC connector** with *all egress through the VPC*, add **Cloud NAT** so
+  internet-bound traffic still has a path.
+- **Firewall:** GCP implicitly allows egress; if you added deny rules, allow
+  `tcp:443` to the gateway / platform hosts.
+- **Locking egress down:** use **Secure Web Proxy** or a Squid forward proxy with
+  an allowlist, then point `SOCIAL_EGRESS_BASE_URL` (or `HTTPS_PROXY`) at it.
+- **Secrets:** store `SOCIAL_*_TOKEN` in **Secret Manager** and mount them as
+  environment variables.
+
+> **Verifying egress:** from inside the API container, a reachable gateway/host
+> returns a normal response; a missing route typically hangs until timeout, and
+> a policy denial returns `403`. The social feed degrades to "not connected" in
+> every failure case rather than erroring the page.
+
 ## Requirement coverage
 
 Each generated artifact maps back to the requirements in the `.nodespec` task
