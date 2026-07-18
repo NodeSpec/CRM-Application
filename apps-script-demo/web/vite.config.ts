@@ -33,7 +33,23 @@ export default defineConfig({
   root: dir,
   plugins: [gasOverrides(), react(), viteSingleFile()],
   resolve: {
-    alias: { "@web": coreSrc },
+    // The core frontend files (services/web/src) would otherwise resolve
+    // react/react-router from services/web/node_modules while our entry uses
+    // apps-script-demo/web/node_modules — TWO module instances, two
+    // NavigationContext objects, and react-router dies at runtime with
+    // "Cannot destructure property 'future' of useContext(...) as it is null"
+    // (Sidebar's NavLinks read a different context than HashRouter provides).
+    // Absolute-path aliases pin every shared package to OUR copy.
+    alias: {
+      "@web": coreSrc,
+      react: path.resolve(dir, "node_modules/react"),
+      "react-dom": path.resolve(dir, "node_modules/react-dom"),
+      "react-router-dom": path.resolve(dir, "node_modules/react-router-dom"),
+      "react-router": path.resolve(dir, "node_modules/react-router"),
+      "@remix-run/router": path.resolve(dir, "node_modules/@remix-run/router"),
+      scheduler: path.resolve(dir, "node_modules/scheduler"),
+    },
+    dedupe: ["react", "react-dom", "react-router-dom", "react-router", "@remix-run/router", "scheduler"],
   },
   // ASCII-only output + strip all comments. Multi-line /* @license */ blocks put
   // real newlines inside the inline <script>; some copy/serve steps mangle those.
