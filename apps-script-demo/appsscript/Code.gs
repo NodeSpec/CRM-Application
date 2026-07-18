@@ -93,6 +93,9 @@ function ping() {
 // ---- API dispatcher (called from the frontend via google.script.run) -------
 function apiCall(req) {
   try {
+    // The client sends the request as a JSON string (google.script.run object
+    // parameters are fragile); accept both forms.
+    if (typeof req === 'string') req = JSON.parse(req);
     var method = req.method;
     var p = String(req.path || '').replace(/^\/+|\/+$/g, '');
     var params = req.params || {};
