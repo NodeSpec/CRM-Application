@@ -10,6 +10,7 @@
 // at runtime. The served HTML is then immune to the document.write breakage.
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { createHash } from "node:crypto";
 import path from "node:path";
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
@@ -35,6 +36,9 @@ if (!js) {
 }
 
 const b64 = (s) => Buffer.from(s, "utf8").toString("base64");
+// Content-hash build id, logged by the running app so a stale deployment is
+// detectable (compare against the id this script prints).
+const BUILD_ID = "web-" + createHash("sha256").update(js).digest("hex").slice(0, 8);
 
 const out = `<!doctype html>
 <html lang="en">
@@ -65,6 +69,8 @@ const out = `<!doctype html>
     <div id="root"></div>
     <script>
       (function () {
+        window.__CRM_BUILD = "${BUILD_ID}";
+        try { console.log("[CRM demo] client build", window.__CRM_BUILD); } catch (_) {}
         function dec(b) { return decodeURIComponent(escape(atob(b))); }
         var CSS_B64 = "${b64(css)}";
         var JS_B64 = "${b64(js)}";

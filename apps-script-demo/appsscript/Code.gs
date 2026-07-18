@@ -12,6 +12,12 @@
  * the demo" responses — no core-repo behaviour is changed.
  */
 
+// Bumped on every change shipped to this file. Shown by ping() (and therefore
+// on the ?page=diag page) so you can verify which server code a deployment is
+// actually running — Apps Script deployments serve a frozen snapshot until you
+// publish a new version.
+var APP_VERSION = 'gs-9';
+
 // ---- Resource → sheet schema (columns the frontend reads/writes) -----------
 var RESOURCES = {
   'companies': { sheet: 'companies',
@@ -86,6 +92,7 @@ function ping() {
   var s = ss_();
   return {
     ok: true,
+    version: APP_VERSION,
     time: new Date().toISOString(),
     bound: Boolean(SpreadsheetApp.getActiveSpreadsheet()),
     spreadsheet: s ? s.getName() : null,

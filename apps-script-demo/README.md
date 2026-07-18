@@ -82,6 +82,24 @@ clasp push
 
 `clasp` pushes `Code.gs`, `Index.html`, and `appsscript.json` as-is.
 
+## Updating an existing deployment (IMPORTANT)
+
+An Apps Script **web-app deployment serves a frozen snapshot** of the code at
+the moment its version was published. Saving new file contents in the editor
+(or `clasp push`) does **not** change what the `/exec` URL serves.
+
+After updating `Code.gs` / `Index.html`:
+
+1. **Deploy → Manage deployments → ✏️ (edit) → Version: “New version” → Deploy.**
+   This keeps the same `/exec` URL and points it at the new code.
+2. Verify what's live: open `…/exec?page=diag` — the ping output shows the
+   server `version` (e.g. `gs-9`, defined as `APP_VERSION` in `Code.gs`), and the
+   main app logs `[CRM demo] client build web-XXXXXXXX` to the browser console
+   (the build script prints the expected id when it runs).
+
+If the diag `version` doesn't match the `APP_VERSION` in the code you pasted,
+the deployment is still on an old version.
+
 ## How the backend works
 
 `apiCall({method, path, params, body})` (in `Code.gs`) is the Sheets analogue of
