@@ -61,6 +61,12 @@ you don't need to change the UI.)
      paste `appsscript/appsscript.json`.
 3. Run the `setup` function once (choose `setup` in the toolbar and click Run).
    Approve the permission prompt. This creates the tabs and seeds demo data.
+   > **Standalone scripts work too:** if the project was created at
+   > script.google.com instead of from inside a Sheet, `getActiveSpreadsheet()`
+   > is null — the code then auto-creates a "CRM Sheets Demo Data" spreadsheet in
+   > your Drive and remembers its id in Script Properties. `setup()` logs the
+   > spreadsheet URL, and `…?page=diag` shows it (`url` field) plus a `bound`
+   > flag telling you which mode you're in.
 4. **Deploy → New deployment → Web app.** Execute as *me*, access *Anyone*.
    Open the web-app URL — the CRM loads, backed by your sheet.
 

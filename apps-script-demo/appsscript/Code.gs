@@ -79,11 +79,13 @@ function doGet(e) {
 // Minimal round-trip probe for the diagnostic page — proves google.script.run
 // reaches the server and the spreadsheet is bound.
 function ping() {
-  var s = SpreadsheetApp.getActiveSpreadsheet();
+  var s = ss_();
   return {
     ok: true,
     time: new Date().toISOString(),
+    bound: Boolean(SpreadsheetApp.getActiveSpreadsheet()),
     spreadsheet: s ? s.getName() : null,
+    url: s ? s.getUrl() : null,
     tabs: s ? s.getSheets().map(function (sh) { return sh.getName(); }) : []
   };
 }
@@ -123,7 +125,31 @@ function apiCall(req) {
 function err(status, message) { return { __error: { status: status, message: message } }; }
 
 // ---- Sheet helpers ---------------------------------------------------------
-function ss_() { return SpreadsheetApp.getActiveSpreadsheet(); }
+/**
+ * Resolve the backing spreadsheet. Container-bound scripts (created via
+ * Extensions > Apps Script inside a Sheet) get it from getActiveSpreadsheet().
+ * Standalone scripts get null there — so fall back to a spreadsheet id stored
+ * in Script Properties, creating "CRM Sheets Demo Data" on first use.
+ */
+var SS_PROP = 'CRM_DEMO_SPREADSHEET_ID';
+var ssCache_ = null;
+function ss_() {
+  if (ssCache_) return ssCache_;
+  var s = SpreadsheetApp.getActiveSpreadsheet();
+  if (!s) {
+    var props = PropertiesService.getScriptProperties();
+    var id = props.getProperty(SS_PROP);
+    if (id) {
+      try { s = SpreadsheetApp.openById(id); } catch (e) { s = null; }
+    }
+    if (!s) {
+      s = SpreadsheetApp.create('CRM Sheets Demo Data');
+      props.setProperty(SS_PROP, s.getId());
+    }
+  }
+  ssCache_ = s;
+  return s;
+}
 function headerFor_(cfg) { return ['id'].concat(cfg.columns).concat(['created_at']); }
 
 function sheetFor_(cfg) {
@@ -339,7 +365,11 @@ function setup() {
   seedReturn_('activities', { type: 'call', subject: 'Discovery call', body: 'Discussed QA bottleneck.', module: 'companies', record_id: acme.id, actor: 'Jordan Mercer', occurred_at: new Date().toISOString() });
   seedReturn_('publicity-contacts', { organization: 'TechCrunch', format: 'Blog', contact_name: 'A. Writer', email: 'tips@example.com' });
 
-  SpreadsheetApp.getActiveSpreadsheet().toast('Demo data seeded. Deploy as a Web app to use.', 'CRM demo', 5);
+  var s = ss_();
+  try {
+    s.toast('Demo data seeded. Deploy as a Web app to use.', 'CRM demo', 5);
+  } catch (e) { /* toast is unavailable for standalone scripts */ }
+  Logger.log('Demo data seeded into: ' + s.getUrl());
 }
 
 function dplus_(n) { var d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
