@@ -224,11 +224,14 @@ export function DealsKanban() {
     }
   }
 
-  const leadStages = b2bStageRows
-    ? b2bStageRows
-        .filter((s) => s.is_active !== false)
-        .map((s) => ({ label: s.label, is_closed: !!s.is_closed }))
-    : meta?.lead_statuses ?? [];
+  // Guard on length, not just presence: an unseeded stage table returns an
+  // empty ARRAY (truthy), which would render a board with zero columns.
+  const leadStages =
+    b2bStageRows && b2bStageRows.length
+      ? b2bStageRows
+          .filter((s) => s.is_active !== false)
+          .map((s) => ({ label: s.label, is_closed: !!s.is_closed }))
+      : meta?.lead_statuses ?? [];
   const captureStages =
     fedStageRows && fedStageRows.length
       ? fedStageRows.filter((s) => s.is_active !== false).map((s) => s.label)

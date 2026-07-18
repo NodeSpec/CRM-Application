@@ -16,7 +16,85 @@
 // on the ?page=diag page) so you can verify which server code a deployment is
 // actually running — Apps Script deployments serve a frozen snapshot until you
 // publish a new version.
-var APP_VERSION = 'gs-10';
+var APP_VERSION = 'gs-11';
+
+// ---- Sign-in and roles (client-handoff mode) --------------------------------
+// Identity comes from Google itself: deploy the web app as "Execute as: User
+// accessing" + "Who has access: Anyone with a Google account". The existing
+// `users` tab is the allowlist and role source (role: admin | member).
+//
+// Modes (decided automatically):
+// - DEMO: the users tab has no real email rows (only the @demo.local seeds) and
+//   no Google identity is available. Everyone is the demo admin, same as the
+//   original demo. Nothing breaks for existing deployments.
+// - ENFORCED: as soon as one real email exists in the users tab. Then every
+//   request is checked: unknown visitors are denied (and auto-added as an
+//   INACTIVE member row so the admin can approve them by setting is_active to
+//   TRUE), inactive users are denied, and admin-only resources reject writes
+//   from members. The FIRST real Google user to arrive on an empty allowlist
+//   becomes the admin automatically (that is the consultant deploying it).
+var ADMIN_ONLY_RESOURCES = {
+  'submission-categories': 1,
+  'custom-field-defs': 1,
+  'contact-lifecycle-stages': 1,
+  'lead-statuses': 1,
+  'b2g-capture-stages': 1,
+  'users': 1
+};
+
+/** Resolve the caller: {ok, mode, email, role, name, reason}. */
+function principal_() {
+  var email = '';
+  try { email = String(Session.getActiveUser().getEmail() || '').toLowerCase(); } catch (e) {}
+  // NOTE: no getEffectiveUser() fallback — under "Execute as: me" that is the
+  // OWNER's email and would silently make every visitor an admin.
+
+  var rows = readAll_(RESOURCES['users']);
+  var isDemoRow = function (u) { return !u.email || String(u.email).indexOf('@demo.local') >= 0; };
+  var enforced = rows.some(function (u) { return !isDemoRow(u); });
+
+  if (!enforced) {
+    if (email) {
+      // Bootstrap: first real Google user becomes the admin.
+      var boot = createRow(RESOURCES['users'], {
+        display_name: email.split('@')[0], email: email, role: 'admin', is_active: true
+      });
+      return { ok: true, mode: 'enforced', email: email, role: 'admin', name: boot.display_name };
+    }
+    return { ok: true, mode: 'demo', email: 'demo@sheets.local', role: 'admin', name: 'Demo User' };
+  }
+
+  if (!email) {
+    return { ok: false, mode: 'enforced', email: '', reason: 'Google did not provide your identity. The web app must be deployed as "Execute as: User accessing" + "Anyone with a Google account".' };
+  }
+  var match = rows.filter(function (u) { return String(u.email || '').toLowerCase() === email; })[0];
+  if (!match) {
+    // Register as pending so the admin only has to flip is_active to TRUE.
+    try {
+      createRow(RESOURCES['users'], {
+        display_name: email.split('@')[0], email: email, role: 'member', is_active: false
+      });
+    } catch (e) {}
+    return { ok: false, mode: 'enforced', email: email, reason: 'Your account (' + email + ') is not approved yet. An admin can approve it under Admin > Users (or set is_active to TRUE in the users tab).' };
+  }
+  if (match.is_active === false) {
+    return { ok: false, mode: 'enforced', email: email, reason: 'Your account (' + email + ') is awaiting approval by an admin.' };
+  }
+  return {
+    ok: true, mode: 'enforced', email: email,
+    role: match.role === 'admin' ? 'admin' : 'member',
+    name: match.display_name || email
+  };
+}
+
+/** Throws unless the caller is an admin (or the app is in open demo mode). */
+function requireAdmin_() {
+  var p = principal_();
+  if (p.mode === 'enforced' && (!p.ok || p.role !== 'admin')) {
+    throw new Error('Admin only. Signed in as: ' + (p.email || 'unknown'));
+  }
+  return p;
+}
 
 // ---- Resource → sheet schema (columns the frontend reads/writes) -----------
 var RESOURCES = {
@@ -89,10 +167,18 @@ function doGet(e) {
 // Minimal round-trip probe for the diagnostic page — proves google.script.run
 // reaches the server and the spreadsheet is bound.
 function ping() {
+  var me = principal_();
+  if (!me.ok) {
+    return { ok: true, version: APP_VERSION, authorized: false, email: me.email || '', reason: me.reason || '' };
+  }
   var s = ss_();
   return {
     ok: true,
     version: APP_VERSION,
+    authorized: true,
+    mode: me.mode,
+    email: me.email,
+    role: me.role,
     time: new Date().toISOString(),
     bound: Boolean(SpreadsheetApp.getActiveSpreadsheet()),
     spreadsheet: s ? s.getName() : null,
@@ -113,6 +199,24 @@ function apiCall(req) {
     var body = req.body || {};
     var parts = p.split('/');
     var resource = parts[0];
+
+    // Identity + authorization (see principal_ above). whoami is always open so
+    // the frontend can render a helpful denied screen.
+    if (resource === 'whoami') {
+      var who = principal_();
+      return {
+        authorized: who.ok, mode: who.mode, email: who.email || '',
+        role: who.role || null, display_name: who.name || '', reason: who.reason || null
+      };
+    }
+    var me = principal_();
+    if (!me.ok) return err(403, me.reason || 'Access denied');
+    // Admin-only config surfaces: members can read them (dropdowns need them)
+    // but only admins may write; the users resource is admin-only entirely.
+    if (ADMIN_ONLY_RESOURCES[resource] && me.role !== 'admin' &&
+        (method !== 'GET' || resource === 'users')) {
+      return err(403, 'Admin only. Signed in as: ' + me.email);
+    }
 
     if (resource === 'meta') return buildMeta();
     if (resource === 'dashboard') return buildDashboard();
@@ -401,6 +505,8 @@ function socialFeed(companyId) {
 
 // ---- One-time setup: create tabs + seed demo data --------------------------
 function setup() {
+  requireAdmin_(); // no-op in open demo mode; admin-only once sign-in is active
+
   Object.keys(RESOURCES).forEach(function (k) { sheetFor_(RESOURCES[k]); });
 
   seedIfEmpty_('users', [
@@ -486,6 +592,8 @@ function setup() {
  * Container-bound scripts ignore this (they always use their own Sheet).
  */
 function adoptSpreadsheet(spreadsheetId) {
+  requireAdmin_(); // no-op in open demo mode; admin-only once sign-in is active
+
   var id = spreadsheetId || 'PASTE_SPREADSHEET_ID_HERE';
   SpreadsheetApp.openById(id); // throws if not accessible
   PropertiesService.getScriptProperties().setProperty(SS_PROP, id);
@@ -500,6 +608,8 @@ function adoptSpreadsheet(spreadsheetId) {
  * it is safe to re-run after every import.
  */
 function backfillIds() {
+  requireAdmin_(); // no-op in open demo mode; admin-only once sign-in is active
+
   var fixed = 0;
   Object.keys(RESOURCES).forEach(function (k) {
     var cfg = RESOURCES[k];

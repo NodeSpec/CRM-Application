@@ -82,6 +82,52 @@ clasp push
 
 `clasp` pushes `Code.gs`, `Index.html`, and `appsscript.json` as-is.
 
+## Client handoff: Google sign-in and roles (gs-11+)
+
+The app supports real per-user access using Google sign-in as the front door and
+the `users` tab as the allowlist and role source. No passwords are stored
+anywhere. This works across email domains (a consultant on one domain, their
+customer on another).
+
+### How to turn it on
+
+1. Deploy (or edit the deployment of) the web app with these two settings:
+   - **Execute as: User accessing the web app**
+   - **Who has access: Anyone with a Google account**
+2. Share the backing **spreadsheet** with each person who should use the app
+   (Editor access). This is required because the script runs as the visitor.
+3. Open the `/exec` URL yourself, signed into your own Google account, and
+   approve the permission prompt. **The first real Google user to arrive becomes
+   the admin automatically.** Check `?page=diag`: ping shows your email and
+   `role: admin`.
+
+### How access works after that
+
+- Anyone not in the `users` tab who opens the app sees an "Access not approved
+  yet" screen, and a row for them is added to the `users` tab automatically with
+  `is_active = FALSE`. To approve them, set `is_active` to `TRUE` (and pick
+  `admin` or `member` in the role column), either directly in the sheet or from
+  **Admin > Users** in the app.
+- **Admins** can do everything, including the admin-only configuration:
+  submission categories, custom fields, lifecycle stages, pipeline stages, and
+  user management.
+- **Members** can read and edit records (contacts, deals, events, and so on) but
+  every write to the admin-only resources above is rejected by the server, not
+  just hidden in the UI. The Users list is admin-only entirely.
+- `setup()`, `backfillIds()`, and `adoptSpreadsheet()` are admin-only once
+  sign-in is active.
+
+### Honest limits (accepted platform constraints)
+
+- Anyone you share the spreadsheet with can open the sheet itself and edit data
+  directly, bypassing app roles. Apps Script cannot prevent this while running
+  as the visitor. Share the sheet only with people you would trust with the
+  data; roles govern what they can do **through the app**.
+- The original anonymous-demo mode still works: if the `users` tab contains only
+  the `@demo.local` seed rows and no Google identity is available, everyone is
+  the demo admin exactly as before. Enforcement switches on automatically the
+  moment a real email row exists.
+
 ## Updating an existing deployment (IMPORTANT)
 
 An Apps Script **web-app deployment serves a frozen snapshot** of the code at
