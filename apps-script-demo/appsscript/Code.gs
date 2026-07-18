@@ -16,7 +16,7 @@
 // on the ?page=diag page) so you can verify which server code a deployment is
 // actually running — Apps Script deployments serve a frozen snapshot until you
 // publish a new version.
-var APP_VERSION = 'gs-9';
+var APP_VERSION = 'gs-10';
 
 // ---- Resource → sheet schema (columns the frontend reads/writes) -----------
 var RESOURCES = {
@@ -172,8 +172,17 @@ function sheetFor_(cfg) {
   return sh;
 }
 
+// Boolean columns are normalized on read: imported/pasted sheets often hold the
+// TEXT "TRUE"/"FALSE" instead of real booleans, and the string "FALSE" is
+// truthy in JS — which froze the admin activate/deactivate toggles.
+var BOOL_COLS = { is_active: 1, is_closed: 1, met: 1 };
+
 function cellOut_(cfg, key, v) {
   if (cfg.json.indexOf(key) >= 0) return v ? safeJson_(v) : (key === 'options' ? [] : {});
+  if (BOOL_COLS[key]) {
+    if (v === '' || v == null) return null;
+    return v === true || v === 'TRUE' || v === 'true' || v === 1;
+  }
   if (v instanceof Date) return v.toISOString();
   return (v === '' || v === undefined) ? null : v;
 }
@@ -237,17 +246,45 @@ function getRow(cfg, id) {
 }
 function strip_(r) { var o = {}; Object.keys(r).forEach(function (k) { if (k !== '__row') o[k] = r[k]; }); return o; }
 
-function createRow(cfg, body) {
+/**
+ * The sheet's ACTUAL header row (ported tabs may have reordered or extra
+ * columns). Any expected column that's missing is appended to the header so
+ * reads/writes stay aligned. All row writes are keyed by this header — never
+ * by the assumed column order.
+ */
+function liveHead_(cfg) {
   var sh = sheetFor_(cfg);
-  var head = headerFor_(cfg);
+  var vals = sh.getDataRange().getValues();
+  var head = vals.length ? vals[0].map(function (h) { return String(h); }) : [];
+  var want = headerFor_(cfg);
+  for (var i = 0; i < want.length; i++) {
+    if (head.indexOf(want[i]) < 0) {
+      sh.getRange(1, head.length + 1).setValue(want[i]);
+      head.push(want[i]);
+    }
+  }
+  return { sh: sh, head: head };
+}
+
+/** Default booleans like the real API's zod schemas (is_active true, others false). */
+function boolDefault_(key, v) {
+  if (v !== undefined) return v;
+  if (key === 'is_active') return true;
+  if (key === 'is_closed' || key === 'met') return false;
+  return v;
+}
+
+function createRow(cfg, body) {
+  var lh = liveHead_(cfg);
   var id = Utilities.getUuid();
   var now = new Date().toISOString();
-  var row = head.map(function (key) {
+  var row = lh.head.map(function (key) {
     if (key === 'id') return id;
     if (key === 'created_at') return body.created_at || now;
+    if (BOOL_COLS[key]) return boolDefault_(key, body[key]);
     return cellIn_(cfg, key, body[key]);
   });
-  sh.appendRow(row);
+  lh.sh.appendRow(row);
   return getRow(cfg, id);
 }
 
@@ -255,17 +292,16 @@ function updateRow(cfg, id, body) {
   var all = readAll_(cfg);
   var rec = all.filter(function (r) { return String(r.id) === String(id); })[0];
   if (!rec) return err(404, 'Not found');
-  var sh = sheetFor_(cfg);
-  var head = headerFor_(cfg);
+  var lh = liveHead_(cfg);
   var merged = {};
-  head.forEach(function (key) { merged[key] = rec[key]; });
+  lh.head.forEach(function (key) { merged[key] = rec[key]; });
   cfg.columns.forEach(function (key) { if (body[key] !== undefined) merged[key] = body[key]; });
-  var row = head.map(function (key) {
+  var row = lh.head.map(function (key) {
     if (key === 'id') return id;
-    if (key === 'created_at') return rec.created_at;
+    if (key === 'created_at') return rec.created_at || '';
     return cellIn_(cfg, key, merged[key]);
   });
-  sh.getRange(rec.__row, 1, 1, head.length).setValues([row]);
+  lh.sh.getRange(rec.__row, 1, 1, lh.head.length).setValues([row]);
   return getRow(cfg, id);
 }
 
