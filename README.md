@@ -1,5 +1,8 @@
 # Company CRM Template
 This was designed as a use-case showing the ability to utilize NodeSpec for a relatively small complexity build of a company internal CRM. This was built in the span of a few hours with requirements ("REQs" in certain sections of our readme and app), Architecture, tasks.md files and source code/configuration/schema.
+<img width="2880" height="2612" alt="image" src="https://github.com/user-attachments/assets/c18d7128-a2a6-410e-9ef6-69dd9a24d8ee" />
+<img width="2880" height="2612" alt="image" src="https://github.com/user-attachments/assets/6a32a6ce-a4e6-4410-bacd-b593bffdf007" />
+<img width="2880" height="2612" alt="image" src="https://github.com/user-attachments/assets/6e109620-b8c4-479c-b333-869e5a9dd361" />
 
 Included:
 The purpose of the design was a build that includes modular functionality that a user with developer tools or just plain Claude Desktop, Cursor, Codex, etc could iterate without having to change any of the supporting infrastructure or even major backend services. Any feature/frontend changes would effect the react application, api, and database tables and columns.
