@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
+import { useMeta } from "../lib/useMeta";
 import { Star, DataLegend } from "../components/NeedsData";
 
 /**
@@ -142,6 +143,8 @@ const STANDARD_GATES = [
 
 export function B2GCaptureView() {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const meta = useMeta();
   const [opp, setOpp] = useState<Opp | null>(null);
   const [teaming, setTeaming] = useState<Row[]>([]);
   const [stakeholders, setStakeholders] = useState<Row[]>([]);
@@ -276,12 +279,26 @@ export function B2GCaptureView() {
     }
   }
 
+  async function deleteOpp() {
+    if (!opp) return;
+    if (!window.confirm(`Delete opportunity "${opp.notice_id}"? Its teaming, stakeholders and gates are removed too. This cannot be undone.`))
+      return;
+    try {
+      await api.remove("b2g-opportunities", opp.id);
+      navigate("/deals?type=b2g");
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
   // Only a load failure (no opportunity) blocks the page; mutation errors show
   // as a dismissible banner so a single failed action doesn't nuke the view.
   if (!opp) return error ? <p className="error">{error}</p> : <p className="muted">Loading…</p>;
 
-  const curIdx = CAPTURE_STAGES.indexOf(opp.capture_stage ?? "");
-  const nextStage = curIdx >= 0 && curIdx < CAPTURE_STAGES.length - 1 ? CAPTURE_STAGES[curIdx + 1] : null;
+  // Admin-configurable capture stages from /meta (fallback to the defaults).
+  const captureStages = meta?.capture_stages?.length ? meta.capture_stages : CAPTURE_STAGES;
+  const curIdx = captureStages.indexOf(opp.capture_stage ?? "");
+  const nextStage = curIdx >= 0 && curIdx < captureStages.length - 1 ? captureStages[curIdx + 1] : null;
   const gapCount = gates.filter((g) => g.met !== true).length;
   const missingStandard = STANDARD_GATES.filter(
     (s) => !gates.some((g) => String(g.label).toLowerCase() === s.toLowerCase())
@@ -295,6 +312,14 @@ export function B2GCaptureView() {
         </Link>
         <span className="spacer" />
         <DataLegend />
+        <button
+          className="icon-btn row-del"
+          style={{ width: 34, height: 34 }}
+          title="Delete opportunity"
+          onClick={() => void deleteOpp()}
+        >
+          <span className="material-symbols-rounded" style={{ fontSize: 18 }}>delete</span>
+        </button>
       </div>
 
       {error && (
@@ -336,7 +361,7 @@ export function B2GCaptureView() {
         </div>
         {/* Capture lifecycle stepper */}
         <div className="stepper" style={{ marginTop: 18 }}>
-          {CAPTURE_STAGES.map((st, i) => (
+          {captureStages.map((st, i) => (
             <button
               key={st}
               className={"step" + (i === curIdx ? " active" : "") + (curIdx >= 0 && i < curIdx ? " done" : "")}

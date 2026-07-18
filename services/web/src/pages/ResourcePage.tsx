@@ -85,8 +85,11 @@ export function ResourcePage({
   useEffect(() => {
     if (ready || !meta) return;
     const init: Record<string, string> = {};
+    // Skip UI-routing params: due/when are alert deep-links handled below;
+    // type/view are the Pipeline page's sub-view + layout switches, not filters.
+    const UI_PARAMS = ["due", "when", "type", "view"];
     searchParams.forEach((v, k) => {
-      if (k !== "due" && k !== "when") init[k] = v;
+      if (!UI_PARAMS.includes(k)) init[k] = v;
     });
     const due = searchParams.get("due");
     const when = searchParams.get("when");
@@ -196,6 +199,18 @@ export function ResourcePage({
 
   function onExport() {
     downloadCsv(`${resource}.csv`, rowsToCsv(rows, columns));
+  }
+
+  async function onDelete(row: Record<string, unknown>) {
+    const name =
+      (row[columns[0]?.key] as string) || (row.id as string) || "this record";
+    if (!window.confirm(`Delete "${name}"? This cannot be undone.`)) return;
+    try {
+      await api.remove(resource, row.id as string);
+      await load();
+    } catch (e) {
+      setError(`Failed to delete: ${(e as Error).message}`);
+    }
   }
 
   return (
@@ -316,19 +331,19 @@ export function ResourcePage({
               {columns.map((c) => (
                 <th key={c.key}>{c.label}</th>
               ))}
-              {rowAction && <th></th>}
+              <th></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={columns.length + (rowAction ? 1 : 0)} className="muted">
+                <td colSpan={columns.length + 1} className="muted">
                   Loading…
                 </td>
               </tr>
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={columns.length + (rowAction ? 1 : 0)} className="muted">
+                <td colSpan={columns.length + 1} className="muted">
                   No records match.
                 </td>
               </tr>
@@ -346,11 +361,21 @@ export function ResourcePage({
                       )}
                     </td>
                   ))}
-                  {rowAction && (
-                    <td data-label="" style={{ textAlign: "right" }}>
-                      {rowAction(row)}
-                    </td>
-                  )}
+                  <td data-label="" className="row-actions">
+                    {rowAction?.(row)}
+                    {row.id != null && (
+                      <button
+                        className="icon-btn row-del"
+                        title="Delete"
+                        aria-label="Delete record"
+                        onClick={() => void onDelete(row)}
+                      >
+                        <span className="material-symbols-rounded" style={{ fontSize: 17 }}>
+                          delete
+                        </span>
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))
             )}

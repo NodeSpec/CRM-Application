@@ -47,7 +47,11 @@ function bridge<T>(req: ApiRequest): Promise<T> {
         }
       })
       .withFailureHandler((err: Error) => reject(new ApiError(500, err?.message ?? "Server error")))
-      .apiCall(req);
+      // Pass the request as a JSON STRING. google.script.run is strict about
+      // object parameters (undefined-valued properties and non-plain objects
+      // fail the call); a plain string is always legal and JSON round-tripping
+      // drops undefined values. The server parses it back (see apiCall).
+      .apiCall(JSON.stringify(req));
   });
 }
 

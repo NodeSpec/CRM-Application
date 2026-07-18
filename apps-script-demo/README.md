@@ -61,6 +61,12 @@ you don't need to change the UI.)
      paste `appsscript/appsscript.json`.
 3. Run the `setup` function once (choose `setup` in the toolbar and click Run).
    Approve the permission prompt. This creates the tabs and seeds demo data.
+   > **Standalone scripts work too:** if the project was created at
+   > script.google.com instead of from inside a Sheet, `getActiveSpreadsheet()`
+   > is null — the code then auto-creates a "CRM Sheets Demo Data" spreadsheet in
+   > your Drive and remembers its id in Script Properties. `setup()` logs the
+   > spreadsheet URL, and `…?page=diag` shows it (`url` field) plus a `bound`
+   > flag telling you which mode you're in.
 4. **Deploy → New deployment → Web app.** Execute as *me*, access *Anyone*.
    Open the web-app URL — the CRM loads, backed by your sheet.
 
@@ -75,6 +81,24 @@ clasp push
 ```
 
 `clasp` pushes `Code.gs`, `Index.html`, and `appsscript.json` as-is.
+
+## Updating an existing deployment (IMPORTANT)
+
+An Apps Script **web-app deployment serves a frozen snapshot** of the code at
+the moment its version was published. Saving new file contents in the editor
+(or `clasp push`) does **not** change what the `/exec` URL serves.
+
+After updating `Code.gs` / `Index.html`:
+
+1. **Deploy → Manage deployments → ✏️ (edit) → Version: “New version” → Deploy.**
+   This keeps the same `/exec` URL and points it at the new code.
+2. Verify what's live: open `…/exec?page=diag` — the ping output shows the
+   server `version` (e.g. `gs-9`, defined as `APP_VERSION` in `Code.gs`), and the
+   main app logs `[CRM demo] client build web-XXXXXXXX` to the browser console
+   (the build script prints the expected id when it runs).
+
+If the diag `version` doesn't match the `APP_VERSION` in the code you pasted,
+the deployment is still on an old version.
 
 ## How the backend works
 
@@ -93,3 +117,22 @@ it only seeds data into empty config tabs.
   reliable invite path in the demo.
 - This is a demo backend — no concurrency control, no server-side validation
   beyond the frontend's, and no auth. Don't put real data in it.
+- **Why the bundle is a classic IIFE, not ES modules:** Apps Script serves the
+  app inside a sandboxed iframe where inline `<script type="module">` silently
+  does not execute (→ blank page). The Vite build emits a single classic IIFE
+  (`rollupOptions.output.format: "iife"`) and `scripts/build.mjs` strips any
+  leftover `type="module"` / `crossorigin` / `modulepreload`. If you change the
+  build, keep it a classic script. The entry (`gasMain.tsx`) also renders any
+  startup error into `#root` instead of leaving the page blank.
+- **Why the JS/CSS are base64 in `Index.html`:** Apps Script injects your served
+  HTML into the sandbox iframe with `document.write(...)`. A 300 KB minified
+  React bundle contains sequences that break that write
+  (`Failed to execute 'write' on 'Document': Invalid or unexpected token`). So
+  `scripts/build.mjs` base64-encodes the JS and CSS (a charset that cannot
+  contain `<`, `>`, quotes, backslashes, or newlines) and a tiny bootstrap
+  decodes them and injects a `<style>` + `<script>` at runtime. The served HTML
+  is then immune to that breakage. The bundle is also built ASCII-only + as a
+  classic IIFE for good measure.
+- **Diagnostic:** open `…/exec?page=diag` for a dependency-free page that checks
+  inline-script execution, `google.script.run`, and a Sheet round-trip in
+  isolation (served by `Diag.html` + `ping()`).

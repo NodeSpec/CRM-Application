@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { api, ApiError } from "../api/client";
 import { useMeta } from "../lib/useMeta";
+import { useAuth } from "../auth/AuthContext";
 import { Star, DataLegend } from "../components/NeedsData";
 import { ResourcePage } from "./ResourcePage";
 import { MODULES } from "../modules";
@@ -36,7 +37,16 @@ interface Opp {
   status?: string | null;
 }
 
-/** Federal capture lifecycle — mirrors B2GCaptureView. */
+/** Admin-configurable stage row (lead_statuses / b2g_capture_stages). */
+interface StageRow {
+  id: string;
+  label: string;
+  sort_order: number;
+  is_closed?: boolean;
+  is_active?: boolean;
+}
+
+/** Federal capture lifecycle — fallback until stage config loads. */
 const CAPTURE_STAGES = [
   "Identify",
   "Qualify",
@@ -83,6 +93,21 @@ export function DealsKanban() {
   const [creating, setCreating] = useState(false);
   const [newForm, setNewForm] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+
+  // Admin-configurable stages (REQ-023): the board/steppers read live stage
+  // config; meta is the fallback until the lists load.
+  const { isAdmin } = useAuth();
+  const [customizing, setCustomizing] = useState(false);
+  const [b2bStageRows, setB2bStageRows] = useState<StageRow[] | null>(null);
+  const [fedStageRows, setFedStageRows] = useState<StageRow[] | null>(null);
+  const [newStage, setNewStage] = useState("");
+  const loadStages = useCallback(() => {
+    api.list<StageRow>("lead-statuses").then(setB2bStageRows).catch(() => {});
+    api.list<StageRow>("b2g-capture-stages").then(setFedStageRows).catch(() => {});
+  }, []);
+  useEffect(() => {
+    loadStages();
+  }, [loadStages]);
 
   const load = useCallback(() => {
     api
@@ -157,14 +182,66 @@ export function DealsKanban() {
     }
   }
 
-  const leadStages = meta?.lead_statuses ?? [];
+  // ---- Stage config CRUD (admin) ----
+  const stageResource = mode === "b2b" ? "lead-statuses" : "b2g-capture-stages";
+  const stageRows = (mode === "b2b" ? b2bStageRows : fedStageRows) ?? [];
+
+  async function addStage() {
+    const label = newStage.trim();
+    if (!label) return;
+    try {
+      const nextOrder = stageRows.reduce((m, s) => Math.max(m, s.sort_order || 0), 0) + 1;
+      await api.create(stageResource, { label, sort_order: nextOrder });
+      setNewStage("");
+      loadStages();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+  async function patchStage(s: StageRow, patch: Partial<StageRow>) {
+    try {
+      const body: Record<string, unknown> = {
+        label: s.label,
+        sort_order: s.sort_order,
+        is_active: s.is_active !== false,
+        ...patch,
+      };
+      if (mode === "b2b") body.is_closed = patch.is_closed ?? !!s.is_closed;
+      await api.update(stageResource, s.id, body);
+      loadStages();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+  async function deleteStage(s: StageRow) {
+    if (!window.confirm(`Delete the "${s.label}" stage? Existing records keep their value and appear under Unstaged.`))
+      return;
+    try {
+      await api.remove(stageResource, s.id);
+      loadStages();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
+  const leadStages = b2bStageRows
+    ? b2bStageRows
+        .filter((s) => s.is_active !== false)
+        .map((s) => ({ label: s.label, is_closed: !!s.is_closed }))
+    : meta?.lead_statuses ?? [];
+  const captureStages =
+    fedStageRows && fedStageRows.length
+      ? fedStageRows.filter((s) => s.is_active !== false).map((s) => s.label)
+      : meta?.capture_stages?.length
+        ? meta.capture_stages
+        : CAPTURE_STAGES;
   // Federal columns: only prepend "Unstaged" if some record lands there.
   const oppStageOf = (o: Opp) =>
-    o.capture_stage && CAPTURE_STAGES.includes(o.capture_stage)
+    o.capture_stage && captureStages.includes(o.capture_stage)
       ? o.capture_stage
       : UNSTAGED;
   const hasUnstaged = opps.some((o) => oppStageOf(o) === UNSTAGED);
-  const fedStages = hasUnstaged ? [UNSTAGED, ...CAPTURE_STAGES] : CAPTURE_STAGES;
+  const fedStages = hasUnstaged ? [UNSTAGED, ...captureStages] : captureStages;
 
   // Summary rollups for the active mode.
   const openLeads = leads.filter((l) => {
@@ -241,6 +318,17 @@ export function DealsKanban() {
             List
           </button>
         </div>
+        {isAdmin && (
+          <button
+            className="btn"
+            style={{ color: "var(--accent-strong)", borderColor: "var(--accent)" }}
+            onClick={() => setCustomizing(true)}
+            title="Customize pipeline stages"
+          >
+            <span className="material-symbols-rounded" style={{ fontSize: 17, verticalAlign: "-3px", marginRight: 4 }}>tune</span>
+            Customize
+          </button>
+        )}
         <button
           className="btn btn-primary"
           onClick={() => {
@@ -431,7 +519,7 @@ export function DealsKanban() {
                             Set stage…
                           </option>
                         )}
-                        {CAPTURE_STAGES.map((st) => (
+                        {captureStages.map((st) => (
                           <option key={st} value={st}>
                             {st}
                           </option>
@@ -501,7 +589,7 @@ export function DealsKanban() {
                     <label className="acq-field"><span className="dtl-label">Capture stage</span>
                       <select value={newForm.capture_stage ?? ""} onChange={(e) => setNewForm({ ...newForm, capture_stage: e.target.value })}>
                         <option value="">—</option>
-                        {CAPTURE_STAGES.map((s) => <option key={s} value={s}>{s}</option>)}
+                        {captureStages.map((s) => <option key={s} value={s}>{s}</option>)}
                       </select></label>
                   </div>
                 </>
@@ -513,6 +601,92 @@ export function DealsKanban() {
                 <button className="btn" type="button" onClick={() => setCreating(false)}>Cancel</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Admin: customize the active pipeline's stages (REQ-023) */}
+      {customizing && isAdmin && (
+        <div className="modal-overlay" onClick={() => setCustomizing(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 15.5 }}>
+                  Customize {mode === "b2b" ? "sales" : "capture"} stages
+                </div>
+                <div className="muted" style={{ fontSize: 12 }}>
+                  Admin only · drives the board columns, steppers and filters
+                </div>
+              </div>
+              <button className="icon-btn" onClick={() => setCustomizing(false)} aria-label="Close">
+                <span className="material-symbols-rounded">close</span>
+              </button>
+            </div>
+            <div className="modal-body">
+              {stageRows.length === 0 && <p className="muted" style={{ fontSize: 12.5 }}>No stages yet.</p>}
+              {stageRows.map((s) => (
+                <div className="stage-item" key={s.id} style={s.is_active === false ? { opacity: 0.55 } : undefined}>
+                  <input
+                    className="stage-edit"
+                    defaultValue={s.label}
+                    aria-label={`Rename ${s.label}`}
+                    onBlur={(e) => {
+                      const v = e.target.value.trim();
+                      if (v && v !== s.label) patchStage(s, { label: v });
+                    }}
+                    onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+                  />
+                  {mode === "b2b" && (
+                    <button
+                      type="button"
+                      className="chip"
+                      style={
+                        s.is_closed
+                          ? { background: "var(--pos-soft)", color: "var(--pos)", cursor: "pointer", border: "none" }
+                          : { background: "var(--surface-3)", color: "var(--text-3)", cursor: "pointer", border: "none" }
+                      }
+                      title="Closed stages are terminal (drive won/lost rollups)"
+                      onClick={() => patchStage(s, { is_closed: !s.is_closed })}
+                    >
+                      {s.is_closed ? "Closed" : "Open"}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className={"switch " + (s.is_active !== false ? "on" : "off")}
+                    title={s.is_active !== false ? "Active — click to deactivate" : "Inactive — click to activate"}
+                    onClick={() => patchStage(s, { is_active: s.is_active === false })}
+                  >
+                    <span className="knob" />
+                  </button>
+                  <button
+                    type="button"
+                    className="icon-btn row-del"
+                    style={{ width: 28, height: 28 }}
+                    title="Delete stage"
+                    onClick={() => void deleteStage(s)}
+                  >
+                    <span className="material-symbols-rounded" style={{ fontSize: 16 }}>delete</span>
+                  </button>
+                </div>
+              ))}
+              <div className="stage-add">
+                <input
+                  value={newStage}
+                  placeholder="New stage…"
+                  onChange={(e) => setNewStage(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && void addStage()}
+                />
+                <button className="dashed-btn" style={{ width: "auto", flex: "0 0 auto", padding: "9px 12px" }} onClick={() => void addStage()}>
+                  <span className="material-symbols-rounded" style={{ fontSize: 17 }}>add</span>
+                  Add stage
+                </button>
+              </div>
+              <div className="sync-note">
+                <span className="material-symbols-rounded" style={{ fontSize: 18, color: "var(--accent-strong)" }}>database</span>
+                <span>Changes apply to the board immediately. Records in a removed stage keep their value and appear under Unstaged.</span>
+              </div>
+            </div>
           </div>
         </div>
       )}

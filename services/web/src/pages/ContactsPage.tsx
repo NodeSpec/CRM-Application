@@ -123,6 +123,16 @@ export function ContactsPage() {
     }
   }
 
+  async function deleteContact(c: Contact) {
+    if (!window.confirm(`Delete "${c.full_name}"? This cannot be undone.`)) return;
+    try {
+      await api.remove("contacts", c.id);
+      load();
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
   async function toggleField(d: FieldDef) {
     try {
       await api.update("custom-field-defs", d.id, {
@@ -290,6 +300,7 @@ export function ContactsPage() {
             <span className="cg-col-owner">Owner</span>
             <span className="cg-num cg-col-value">Deal value<Star note="No per-contact deal rollup captured yet" /></span>
             <span className="cg-num cg-col-touch">Last touch<Star note="No last-activity timestamp per contact yet" /></span>
+            <span></span>
           </div>
           {rows.length === 0 ? (
             <div className="cg-row"><span className="muted">No contacts match.</span></div>
@@ -335,6 +346,16 @@ export function ContactsPage() {
                 </div>
                 <div className="cg-num cg-col-touch">
                   <span className="muted" title="Not captured yet">—</span>
+                </div>
+                <div>
+                  <button
+                    className="icon-btn row-del"
+                    title="Delete contact"
+                    aria-label={`Delete ${c.full_name}`}
+                    onClick={() => void deleteContact(c)}
+                  >
+                    <span className="material-symbols-rounded" style={{ fontSize: 17 }}>delete</span>
+                  </button>
                 </div>
               </div>
             ))

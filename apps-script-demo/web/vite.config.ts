@@ -33,13 +33,45 @@ export default defineConfig({
   root: dir,
   plugins: [gasOverrides(), react(), viteSingleFile()],
   resolve: {
-    alias: { "@web": coreSrc },
+    // The core frontend files (services/web/src) would otherwise resolve
+    // react/react-router from services/web/node_modules while our entry uses
+    // apps-script-demo/web/node_modules — TWO module instances, two
+    // NavigationContext objects, and react-router dies at runtime with
+    // "Cannot destructure property 'future' of useContext(...) as it is null"
+    // (Sidebar's NavLinks read a different context than HashRouter provides).
+    // Absolute-path aliases pin every shared package to OUR copy.
+    alias: {
+      "@web": coreSrc,
+      react: path.resolve(dir, "node_modules/react"),
+      "react-dom": path.resolve(dir, "node_modules/react-dom"),
+      "react-router-dom": path.resolve(dir, "node_modules/react-router-dom"),
+      "react-router": path.resolve(dir, "node_modules/react-router"),
+      "@remix-run/router": path.resolve(dir, "node_modules/@remix-run/router"),
+      scheduler: path.resolve(dir, "node_modules/scheduler"),
+    },
+    dedupe: ["react", "react-dom", "react-router-dom", "react-router", "@remix-run/router", "scheduler"],
   },
+  // ASCII-only output + strip all comments. Multi-line /* @license */ blocks put
+  // real newlines inside the inline <script>; some copy/serve steps mangle those.
+  // A single-line, comment-free, ASCII blob is the most robust for Apps Script.
+  esbuild: { charset: "ascii", legalComments: "none" },
   build: {
     outDir: path.resolve(dir, "dist"),
     sourcemap: false,
     // Inline everything so there are no separate asset requests.
     assetsInlineLimit: 100_000_000,
     chunkSizeWarningLimit: 5000,
+    // Apps Script serves the app inside a sandboxed iframe where inline
+    // <script type="module"> does NOT execute. Emit a single classic IIFE
+    // bundle instead (the postbuild step strips the leftover type="module").
+    target: "es2018",
+    modulePreload: false,
+    rollupOptions: {
+      output: {
+        format: "iife",
+        inlineDynamicImports: true,
+        entryFileNames: "app.js",
+      },
+    },
   },
 });

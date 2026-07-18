@@ -1,0 +1,54 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <base target="_top" />
+    <style>
+      body { font: 14px/1.5 system-ui, sans-serif; margin: 24px; color: #1a1922; }
+      h1 { font-size: 18px; }
+      pre { background: #f2f1f8; padding: 12px; border-radius: 8px; overflow: auto; }
+      .ok { color: #12a150; font-weight: 700; }
+      .err { color: #b00020; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <h1>CRM Sheets demo — diagnostic</h1>
+    <p id="s1">1. Inline script: <span class="err">did NOT run</span></p>
+    <p id="s2">2. Server ping (<code>google.script.run</code>): waiting…</p>
+    <p id="s3">3. apiCall('meta'): waiting…</p>
+    <pre id="out"></pre>
+    <script>
+      window.onerror = function (m, s, l, c) {
+        document.getElementById("out").textContent += "JS ERROR: " + m + " @" + l + ":" + c + "\n";
+      };
+      // Step 1 — this proves inline classic scripts run in your Apps Script.
+      document.getElementById("s1").innerHTML = '1. Inline script: <span class="ok">ran OK</span>';
+
+      function show(id, ok, msg) {
+        document.getElementById(id).innerHTML =
+          document.getElementById(id).firstChild.textContent +
+          ' <span class="' + (ok ? "ok" : "err") + '">' + msg + "</span>";
+      }
+
+      if (!(window.google && google.script && google.script.run)) {
+        show("s2", false, "google.script.run is UNAVAILABLE (open the deployed /exec web-app URL, not a file preview)");
+      } else {
+        google.script.run
+          .withSuccessHandler(function (r) {
+            show("s2", true, "OK");
+            document.getElementById("out").textContent += "ping: " + JSON.stringify(r, null, 2) + "\n\n";
+          })
+          .withFailureHandler(function (e) { show("s2", false, "FAILED: " + e.message); })
+          .ping();
+
+        google.script.run
+          .withSuccessHandler(function (r) {
+            show("s3", true, "OK");
+            document.getElementById("out").textContent += "meta: " + JSON.stringify(r, null, 2) + "\n";
+          })
+          .withFailureHandler(function (e) { show("s3", false, "FAILED: " + e.message); })
+          .apiCall({ method: "GET", path: "meta" });
+      }
+    </script>
+  </body>
+</html>

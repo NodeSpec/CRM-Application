@@ -12,6 +12,12 @@
  * the demo" responses — no core-repo behaviour is changed.
  */
 
+// Bumped on every change shipped to this file. Shown by ping() (and therefore
+// on the ?page=diag page) so you can verify which server code a deployment is
+// actually running — Apps Script deployments serve a frozen snapshot until you
+// publish a new version.
+var APP_VERSION = 'gs-10';
+
 // ---- Resource → sheet schema (columns the frontend reads/writes) -----------
 var RESOURCES = {
   'companies': { sheet: 'companies',
@@ -52,6 +58,10 @@ var RESOURCES = {
     columns: ['title', 'due_date', 'assignee_id', 'status', 'module', 'record_id'], json: [] },
   'contact-lifecycle-stages': { sheet: 'contact_lifecycle_stages',
     columns: ['label', 'sort_order', 'is_active'], json: [] },
+  'lead-statuses': { sheet: 'lead_statuses',
+    columns: ['label', 'sort_order', 'is_closed', 'is_active'], json: [] },
+  'b2g-capture-stages': { sheet: 'b2g_capture_stages',
+    columns: ['label', 'sort_order', 'is_active'], json: [] },
   'custom-field-defs': { sheet: 'custom_field_defs',
     columns: ['module', 'key', 'label', 'type', 'options', 'is_active', 'sort_order'], json: ['options'] },
   'users': { sheet: 'users', columns: ['display_name', 'email', 'role', 'is_active'], json: [] }
@@ -67,16 +77,36 @@ var PUBLICITY_FORMATS = ['Podcast', 'Newsletter', 'Blog', 'Print', 'TV'];
 var THRESHOLDS = { b2g_due_date_threshold_days: 14, submission_deadline_threshold_days: 14 };
 
 // ---- Web app entry ---------------------------------------------------------
-function doGet() {
-  return HtmlService.createHtmlOutputFromFile('Index')
+function doGet(e) {
+  var page = (e && e.parameter && e.parameter.page) || '';
+  var file = page === 'diag' ? 'Diag' : 'Index';
+  return HtmlService.createHtmlOutputFromFile(file)
     .setTitle('CRM Platform — Sheets demo')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
+// Minimal round-trip probe for the diagnostic page — proves google.script.run
+// reaches the server and the spreadsheet is bound.
+function ping() {
+  var s = ss_();
+  return {
+    ok: true,
+    version: APP_VERSION,
+    time: new Date().toISOString(),
+    bound: Boolean(SpreadsheetApp.getActiveSpreadsheet()),
+    spreadsheet: s ? s.getName() : null,
+    url: s ? s.getUrl() : null,
+    tabs: s ? s.getSheets().map(function (sh) { return sh.getName(); }) : []
+  };
+}
+
 // ---- API dispatcher (called from the frontend via google.script.run) -------
 function apiCall(req) {
   try {
+    // The client sends the request as a JSON string (google.script.run object
+    // parameters are fragile); accept both forms.
+    if (typeof req === 'string') req = JSON.parse(req);
     var method = req.method;
     var p = String(req.path || '').replace(/^\/+|\/+$/g, '');
     var params = req.params || {};
@@ -109,7 +139,31 @@ function apiCall(req) {
 function err(status, message) { return { __error: { status: status, message: message } }; }
 
 // ---- Sheet helpers ---------------------------------------------------------
-function ss_() { return SpreadsheetApp.getActiveSpreadsheet(); }
+/**
+ * Resolve the backing spreadsheet. Container-bound scripts (created via
+ * Extensions > Apps Script inside a Sheet) get it from getActiveSpreadsheet().
+ * Standalone scripts get null there — so fall back to a spreadsheet id stored
+ * in Script Properties, creating "CRM Sheets Demo Data" on first use.
+ */
+var SS_PROP = 'CRM_DEMO_SPREADSHEET_ID';
+var ssCache_ = null;
+function ss_() {
+  if (ssCache_) return ssCache_;
+  var s = SpreadsheetApp.getActiveSpreadsheet();
+  if (!s) {
+    var props = PropertiesService.getScriptProperties();
+    var id = props.getProperty(SS_PROP);
+    if (id) {
+      try { s = SpreadsheetApp.openById(id); } catch (e) { s = null; }
+    }
+    if (!s) {
+      s = SpreadsheetApp.create('CRM Sheets Demo Data');
+      props.setProperty(SS_PROP, s.getId());
+    }
+  }
+  ssCache_ = s;
+  return s;
+}
 function headerFor_(cfg) { return ['id'].concat(cfg.columns).concat(['created_at']); }
 
 function sheetFor_(cfg) {
@@ -118,8 +172,17 @@ function sheetFor_(cfg) {
   return sh;
 }
 
+// Boolean columns are normalized on read: imported/pasted sheets often hold the
+// TEXT "TRUE"/"FALSE" instead of real booleans, and the string "FALSE" is
+// truthy in JS — which froze the admin activate/deactivate toggles.
+var BOOL_COLS = { is_active: 1, is_closed: 1, met: 1 };
+
 function cellOut_(cfg, key, v) {
   if (cfg.json.indexOf(key) >= 0) return v ? safeJson_(v) : (key === 'options' ? [] : {});
+  if (BOOL_COLS[key]) {
+    if (v === '' || v == null) return null;
+    return v === true || v === 'TRUE' || v === 'true' || v === 1;
+  }
   if (v instanceof Date) return v.toISOString();
   return (v === '' || v === undefined) ? null : v;
 }
@@ -146,10 +209,25 @@ function readAll_(cfg) {
 
 function listRows(cfg, params) {
   var rows = readAll_(cfg);
+  var known = ['id'].concat(cfg.columns);
   Object.keys(params || {}).forEach(function (k) {
     if (k === 'q' || k === 'limit' || k === 'offset') return;
     var val = params[k];
     if (val === '' || val == null) return;
+    // Range filters (<col>_from / <col>_to) on known columns, like the real API.
+    var m = k.match(/^(.*)_(from|to)$/);
+    if (m && known.indexOf(m[1]) >= 0) {
+      var col = m[1], dir = m[2];
+      rows = rows.filter(function (r) {
+        var cell = String(r[col] || '').slice(0, 10);
+        if (!cell) return false;
+        return dir === 'from' ? cell >= String(val).slice(0, 10) : cell <= String(val).slice(0, 10);
+      });
+      return;
+    }
+    // Ignore unknown keys (e.g. UI params) instead of filtering everything out —
+    // mirrors the real crudRouter, which only matches real columns.
+    if (known.indexOf(k) < 0) return;
     rows = rows.filter(function (r) { return String(r[k]) === String(val); });
   });
   if (params && params.q) {
@@ -168,17 +246,45 @@ function getRow(cfg, id) {
 }
 function strip_(r) { var o = {}; Object.keys(r).forEach(function (k) { if (k !== '__row') o[k] = r[k]; }); return o; }
 
-function createRow(cfg, body) {
+/**
+ * The sheet's ACTUAL header row (ported tabs may have reordered or extra
+ * columns). Any expected column that's missing is appended to the header so
+ * reads/writes stay aligned. All row writes are keyed by this header — never
+ * by the assumed column order.
+ */
+function liveHead_(cfg) {
   var sh = sheetFor_(cfg);
-  var head = headerFor_(cfg);
+  var vals = sh.getDataRange().getValues();
+  var head = vals.length ? vals[0].map(function (h) { return String(h); }) : [];
+  var want = headerFor_(cfg);
+  for (var i = 0; i < want.length; i++) {
+    if (head.indexOf(want[i]) < 0) {
+      sh.getRange(1, head.length + 1).setValue(want[i]);
+      head.push(want[i]);
+    }
+  }
+  return { sh: sh, head: head };
+}
+
+/** Default booleans like the real API's zod schemas (is_active true, others false). */
+function boolDefault_(key, v) {
+  if (v !== undefined) return v;
+  if (key === 'is_active') return true;
+  if (key === 'is_closed' || key === 'met') return false;
+  return v;
+}
+
+function createRow(cfg, body) {
+  var lh = liveHead_(cfg);
   var id = Utilities.getUuid();
   var now = new Date().toISOString();
-  var row = head.map(function (key) {
+  var row = lh.head.map(function (key) {
     if (key === 'id') return id;
     if (key === 'created_at') return body.created_at || now;
+    if (BOOL_COLS[key]) return boolDefault_(key, body[key]);
     return cellIn_(cfg, key, body[key]);
   });
-  sh.appendRow(row);
+  lh.sh.appendRow(row);
   return getRow(cfg, id);
 }
 
@@ -186,17 +292,16 @@ function updateRow(cfg, id, body) {
   var all = readAll_(cfg);
   var rec = all.filter(function (r) { return String(r.id) === String(id); })[0];
   if (!rec) return err(404, 'Not found');
-  var sh = sheetFor_(cfg);
-  var head = headerFor_(cfg);
+  var lh = liveHead_(cfg);
   var merged = {};
-  head.forEach(function (key) { merged[key] = rec[key]; });
+  lh.head.forEach(function (key) { merged[key] = rec[key]; });
   cfg.columns.forEach(function (key) { if (body[key] !== undefined) merged[key] = body[key]; });
-  var row = head.map(function (key) {
+  var row = lh.head.map(function (key) {
     if (key === 'id') return id;
-    if (key === 'created_at') return rec.created_at;
+    if (key === 'created_at') return rec.created_at || '';
     return cellIn_(cfg, key, merged[key]);
   });
-  sh.getRange(rec.__row, 1, 1, head.length).setValues([row]);
+  lh.sh.getRange(rec.__row, 1, 1, lh.head.length).setValues([row]);
   return getRow(cfg, id);
 }
 
@@ -212,7 +317,8 @@ function buildMeta() {
     .sort(function (a, b) { return (a.sort_order || 0) - (b.sort_order || 0); });
   var owners = readAll_(RESOURCES['users']).filter(active_);
   return {
-    lead_statuses: LEAD_STATUSES,
+    lead_statuses: leadStatuses_(),
+    capture_stages: captureStages_(),
     submission_categories: cats.map(function (c) { return { id: c.id, label: c.label }; }),
     publicity_formats: PUBLICITY_FORMATS,
     contact_lifecycle_stages: stages.map(function (s) { return s.label; }),
@@ -222,6 +328,21 @@ function buildMeta() {
   };
 }
 function active_(r) { return r.is_active === true || r.is_active === 'TRUE' || r.is_active == null; }
+
+/** Admin-configurable stages read from tabs, with defaults when unseeded. */
+function bySort_(a, b) { return (a.sort_order || 0) - (b.sort_order || 0); }
+function leadStatuses_() {
+  var rows = readAll_(RESOURCES['lead-statuses']).filter(active_).sort(bySort_);
+  return rows.length
+    ? rows.map(function (s) { return { label: s.label, is_closed: s.is_closed === true }; })
+    : LEAD_STATUSES;
+}
+function captureStages_() {
+  var rows = readAll_(RESOURCES['b2g-capture-stages']).filter(active_).sort(bySort_);
+  return rows.length
+    ? rows.map(function (s) { return s.label; })
+    : ['Identify', 'Qualify', 'Pursue', 'Capture', 'Proposal', 'Submitted', 'Award'];
+}
 
 function buildDashboard() {
   var today = new Date(); today.setHours(0, 0, 0, 0);
@@ -239,7 +360,7 @@ function buildDashboard() {
   var closed = function (s) { return s === 'Closed-Won' || s === 'Closed-Lost'; };
   var num = function (v) { return Number(v) || 0; };
 
-  var byStatus = LEAD_STATUSES.map(function (s) {
+  var byStatus = leadStatuses_().map(function (s) {
     return { status: s.label, n: leads.filter(function (l) { return l.status === s.label; }).length };
   }).filter(function (r) { return r.n > 0; });
 
@@ -294,6 +415,31 @@ function setup() {
   seedIfEmpty_('submission-categories', [
     { label: 'Award', is_active: true }, { label: 'Grant', is_active: true }, { label: 'RFP', is_active: true }
   ]);
+  seedIfEmpty_('lead-statuses', [
+    { label: 'New', sort_order: 1, is_closed: false, is_active: true },
+    { label: 'Contacted', sort_order: 2, is_closed: false, is_active: true },
+    { label: 'Qualified', sort_order: 3, is_closed: false, is_active: true },
+    { label: 'Proposal', sort_order: 4, is_closed: false, is_active: true },
+    { label: 'Negotiation', sort_order: 5, is_closed: false, is_active: true },
+    { label: 'Closed-Won', sort_order: 6, is_closed: true, is_active: true },
+    { label: 'Closed-Lost', sort_order: 7, is_closed: true, is_active: true }
+  ]);
+  seedIfEmpty_('b2g-capture-stages', [
+    { label: 'Identify', sort_order: 1, is_active: true }, { label: 'Qualify', sort_order: 2, is_active: true },
+    { label: 'Pursue', sort_order: 3, is_active: true }, { label: 'Capture', sort_order: 4, is_active: true },
+    { label: 'Proposal', sort_order: 5, is_active: true }, { label: 'Submitted', sort_order: 6, is_active: true },
+    { label: 'Award', sort_order: 7, is_active: true }
+  ]);
+
+  // Demo records only seed into an EMPTY dataset — re-running setup() (or
+  // running it against a spreadsheet you've imported your own data into) never
+  // duplicates or overwrites existing rows.
+  if (readAll_(RESOURCES['companies']).length > 0) {
+    Logger.log('Data already present — skipped demo-record seeding.');
+    var s0 = ss_();
+    try { s0.toast('Tabs verified. Existing data kept.', 'CRM demo', 5); } catch (e) {}
+    return;
+  }
 
   var owners = readAll_(RESOURCES['users']);
   var oid = owners[0] ? owners[0].id : '';
@@ -325,7 +471,59 @@ function setup() {
   seedReturn_('activities', { type: 'call', subject: 'Discovery call', body: 'Discussed QA bottleneck.', module: 'companies', record_id: acme.id, actor: 'Jordan Mercer', occurred_at: new Date().toISOString() });
   seedReturn_('publicity-contacts', { organization: 'TechCrunch', format: 'Blog', contact_name: 'A. Writer', email: 'tips@example.com' });
 
-  SpreadsheetApp.getActiveSpreadsheet().toast('Demo data seeded. Deploy as a Web app to use.', 'CRM demo', 5);
+  var s = ss_();
+  try {
+    s.toast('Demo data seeded. Deploy as a Web app to use.', 'CRM demo', 5);
+  } catch (e) { /* toast is unavailable for standalone scripts */ }
+  Logger.log('Demo data seeded into: ' + s.getUrl());
+}
+
+// ---- Porting your own data in ---------------------------------------------
+/**
+ * Point a STANDALONE script at an existing spreadsheet (instead of the
+ * auto-created "CRM Sheets Demo Data"). Paste the target spreadsheet's id into
+ * the call below, run once, then run setup() to create any missing tabs.
+ * Container-bound scripts ignore this (they always use their own Sheet).
+ */
+function adoptSpreadsheet(spreadsheetId) {
+  var id = spreadsheetId || 'PASTE_SPREADSHEET_ID_HERE';
+  SpreadsheetApp.openById(id); // throws if not accessible
+  PropertiesService.getScriptProperties().setProperty(SS_PROP, id);
+  ssCache_ = null;
+  Logger.log('Adopted spreadsheet: ' + ss_().getUrl());
+}
+
+/**
+ * After pasting rows from another sheet under the matching headers, run this
+ * once: it assigns an id + created_at to any row missing them (rows without an
+ * id are otherwise ignored by the app). Never touches rows that have an id, so
+ * it is safe to re-run after every import.
+ */
+function backfillIds() {
+  var fixed = 0;
+  Object.keys(RESOURCES).forEach(function (k) {
+    var cfg = RESOURCES[k];
+    var sh = sheetFor_(cfg);
+    var vals = sh.getDataRange().getValues();
+    if (vals.length < 2) return;
+    var head = vals[0];
+    var idCol = head.indexOf('id');
+    var createdCol = head.indexOf('created_at');
+    if (idCol < 0) return;
+    for (var i = 1; i < vals.length; i++) {
+      var row = vals[i];
+      // Skip fully blank rows; fix rows that have content but no id.
+      var hasContent = row.some(function (v, j) { return j !== idCol && v !== '' && v != null; });
+      if (!hasContent || row[idCol]) continue;
+      sh.getRange(i + 1, idCol + 1).setValue(Utilities.getUuid());
+      if (createdCol >= 0 && !row[createdCol]) {
+        sh.getRange(i + 1, createdCol + 1).setValue(new Date().toISOString());
+      }
+      fixed++;
+    }
+  });
+  Logger.log('backfillIds: fixed ' + fixed + ' row(s)');
+  try { ss_().toast('Assigned ids to ' + fixed + ' imported row(s).', 'CRM demo', 5); } catch (e) {}
 }
 
 function dplus_(n) { var d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }

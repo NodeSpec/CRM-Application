@@ -3,7 +3,23 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CRM Platform — Sheets demo</title>
+    <title>CRM Platform &mdash; Sheets demo</title>
+    <script>
+      // Surface any startup/runtime error onto the page instead of a blank panel.
+      window.onerror = function (m, s, l, c) {
+        try {
+          var d = document.getElementById("boot-error");
+          if (!d) {
+            d = document.createElement("pre");
+            d.id = "boot-error";
+            d.style.cssText =
+              "position:fixed;inset:0;z-index:99999;margin:0;padding:16px;background:#fff;color:#b00020;white-space:pre-wrap;font:12px/1.5 monospace;overflow:auto";
+            (document.body || document.documentElement).appendChild(d);
+          }
+          d.textContent += "JS error: " + m + " @ " + (s || "") + ":" + l + ":" + c + "\n";
+        } catch (_) {}
+      };
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

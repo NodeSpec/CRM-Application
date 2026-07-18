@@ -13,10 +13,14 @@ export const metaRouter = Router();
 
 metaRouter.get("/", async (_req, res, next) => {
   try {
-    const [statuses, categories, formats, lifecycle, owners, cfDefs] =
+    const [statuses, captureStages, categories, formats, lifecycle, owners, cfDefs] =
       await Promise.all([
         pool.query(
           `SELECT label, is_closed FROM lead_statuses
+            WHERE is_active = true ORDER BY sort_order`
+        ),
+        pool.query(
+          `SELECT label FROM b2g_capture_stages
             WHERE is_active = true ORDER BY sort_order`
         ),
         pool.query(
@@ -43,6 +47,7 @@ metaRouter.get("/", async (_req, res, next) => {
 
     res.json({
       lead_statuses: statuses.rows,
+      capture_stages: captureStages.rows.map((r) => r.label),
       submission_categories: categories.rows,
       publicity_formats: formats.rows.map((r) => r.label),
       contact_lifecycle_stages: lifecycle.rows.map((r) => r.label),
