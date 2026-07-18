@@ -6,6 +6,7 @@ This was designed as a use-case showing the ability to utilize NodeSpec for a re
 
 Included:
 The purpose of the design was a build that includes modular functionality that a user with developer tools or just plain Claude Desktop, Cursor, Codex, etc could iterate without having to change any of the supporting infrastructure or even major backend services. Any feature/frontend changes would effect the react application, api, and database tables and columns.
+This is a template application that still requires tweaking to customer workflows, etc.
 Also included is an initial MVP for use on a google sheet backend. Note: Google sheets is not highly performant for a tool with this type of read/write logic in an App Script extension and has a noticeable lag upon record changes.
 
 #Google Sheet Version
