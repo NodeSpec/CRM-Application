@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { useMeta } from "../lib/useMeta";
 import { Star, DataLegend } from "../components/NeedsData";
@@ -80,6 +80,7 @@ function dispo(d?: string): { label: string; color: string } {
 
 export function B2BDealView() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const meta = useMeta();
   const [lead, setLead] = useState<Lead | null>(null);
   const [company, setCompany] = useState<{ id: string; name: string } | null>(null);
@@ -224,12 +225,31 @@ export function B2BDealView() {
     }
   }
 
+  async function deleteDeal() {
+    if (!lead) return;
+    if (!window.confirm(`Delete the "${lead.company_name}" deal? This cannot be undone.`)) return;
+    try {
+      await api.remove("b2b-leads", lead.id);
+      navigate("/deals?type=b2b");
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
   return (
     <>
       <div className="page-head">
         <Link to="/deals?type=b2b" className="muted">← Pipeline</Link>
         <span className="spacer" />
         <DataLegend />
+        <button
+          className="icon-btn row-del"
+          style={{ width: 34, height: 34 }}
+          title="Delete deal"
+          onClick={() => void deleteDeal()}
+        >
+          <span className="material-symbols-rounded" style={{ fontSize: 18 }}>delete</span>
+        </button>
       </div>
 
       {error && (

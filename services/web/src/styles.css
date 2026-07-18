@@ -1196,6 +1196,27 @@ tbody tr:hover {
   display: grid;
   place-items: center;
 }
+/* Row actions (delete + optional module action, e.g. event invite) */
+.row-actions {
+  text-align: right;
+  white-space: nowrap;
+}
+.row-actions > * {
+  vertical-align: middle;
+}
+.row-del {
+  width: 30px;
+  height: 30px;
+  color: var(--text-3);
+}
+.row-actions .row-del {
+  margin-left: 6px;
+}
+.row-del:hover {
+  color: var(--neg);
+  background: var(--neg-soft);
+}
+
 .task-check {
   width: 20px;
   height: 20px;
@@ -1413,7 +1434,7 @@ tbody tr:hover {
 .cg-head,
 .cg-row {
   display: grid;
-  grid-template-columns: 1.8fr 1.2fr 92px 150px 150px 108px 96px;
+  grid-template-columns: 1.8fr 1.2fr 92px 150px 150px 108px 96px 36px;
   align-items: center;
   gap: 14px;
   padding: 12px 14px;
@@ -1857,7 +1878,7 @@ a.social-tab.on {
   /* Contacts table drops the wide columns on small screens. */
   .cg-head,
   .cg-row {
-    grid-template-columns: 2fr 1.2fr 130px;
+    grid-template-columns: 2fr 1.2fr 130px 36px;
   }
   .cg-col-type,
   .cg-col-value,

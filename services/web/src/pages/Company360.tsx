@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { useMeta } from "../lib/useMeta";
 import { Star, DataLegend } from "../components/NeedsData";
@@ -90,6 +90,7 @@ function stageStyle(status: string): React.CSSProperties {
 
 export function Company360() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const meta = useMeta();
   const [company, setCompany] = useState<Company | null>(null);
   const [deals, setDeals] = useState<Lead[]>([]);
@@ -165,6 +166,18 @@ export function Company360() {
     try {
       await api.remove("company-competitors", cid);
       loadComps();
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
+  async function deleteCompany() {
+    if (!company || !id) return;
+    if (!window.confirm(`Delete "${company.name}"? Linked deals and contacts keep their records but lose the account link. This cannot be undone.`))
+      return;
+    try {
+      await api.remove("companies", id);
+      navigate("/companies");
     } catch (err) {
       setError((err as Error).message);
     }
@@ -272,6 +285,14 @@ export function Company360() {
               add
             </span>
             Log activity
+          </button>
+          <button
+            className="icon-btn row-del"
+            style={{ width: 38, height: 38 }}
+            title="Delete company"
+            onClick={() => void deleteCompany()}
+          >
+            <span className="material-symbols-rounded" style={{ fontSize: 19 }}>delete</span>
           </button>
         </div>
         <div className="stat-mini-grid">
