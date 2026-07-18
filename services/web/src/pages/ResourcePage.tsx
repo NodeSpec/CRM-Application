@@ -85,8 +85,11 @@ export function ResourcePage({
   useEffect(() => {
     if (ready || !meta) return;
     const init: Record<string, string> = {};
+    // Skip UI-routing params: due/when are alert deep-links handled below;
+    // type/view are the Pipeline page's sub-view + layout switches, not filters.
+    const UI_PARAMS = ["due", "when", "type", "view"];
     searchParams.forEach((v, k) => {
-      if (k !== "due" && k !== "when") init[k] = v;
+      if (!UI_PARAMS.includes(k)) init[k] = v;
     });
     const due = searchParams.get("due");
     const when = searchParams.get("when");

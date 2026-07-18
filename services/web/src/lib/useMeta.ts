@@ -13,6 +13,8 @@ export interface CustomFieldDef {
 
 export interface Meta {
   lead_statuses: { label: string; is_closed: boolean }[];
+  /** Federal capture lifecycle stage labels (admin-configurable). */
+  capture_stages?: string[];
   submission_categories: { id: string; label: string }[];
   publicity_formats: string[];
   contact_lifecycle_stages: string[];
