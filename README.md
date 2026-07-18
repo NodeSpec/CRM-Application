@@ -1,21 +1,28 @@
-# Setting up your CRM — a plain-English guide
+# Setting up your CRM For Non-Developers
 
-This guide explains, in everyday language, what needs to happen to get your CRM running. It's written for someone who isn't a developer. Wherever a step needs technical hands, that's called out clearly so you know when to loop in your developer or IT person.
+This guide explains, in everyday language, what needs to happen to get your CRM running. It's written for someone who isn't a developer. Wherever a step needs technical hands, that's called out clearly so you know when to loop in someone who is good enough with AI tools, an actual developer or IT professional. This app was purpose built for the use-case and structure where you can almost completely use any of the Frontier models or a decent local model to write code with a human checking frontend feature execution. This whole app was built and troubleshooted over the course of about 4 total hours and still requires company-specific workflows, changes, and placeholders to be removed. All combined, this was architected to where changes like this are quick and simple with the use of your favorite model and very little to zero code writing on your own.
+
+Overall: This was a build vs. buy decision. The Company has to decide if purchasing an enterprise license from a major CRM provider, or any other major Operations function for that matter, is worth time savings and setup. This providers come with their native support personnel to either deploy locally or log you into their managed systems. Sometimes it's better to buy. As a comparison, the app you see is a total of 4 work hours to build with human code checks only in the backend and deployment. The frontend and database was easily configurable with a low level AI model.
+
+A fully usable, past-MVP CRM would take very little time to implement based on this architecture. 
 
 > **Important:** As of this writing, the CRM's architecture has been designed but no code has been written yet. This guide covers the pieces you (or whoever manages your servers) need to have ready *before* the developers install the actual application. Think of it as preparing the building lots before construction starts.
 
-## The five pieces, in plain terms
+Included in this git are two apps:
+-  Fully containerized and hostable CRM using a tool called Docker either on your personal machine or via a cloud server. In order to be collaborative, the best answer is on a cloud container for multiple users to access. 
+-  Google-sheet backed app variant
+## The five pieces of the deployable app:
 
-Your CRM isn't one single program — it's five smaller pieces working together, all packaged in containers (think of a container like a sealed, self-contained box that runs the same way on any computer). Here's what each one does:
+To build or deploy anything locally and not as a managed service, especially as a Company's internal processes grow, the frontend functionality becomes secondary to backend and infrastructure. This includes networking (ingress and egress traffic), identity (how your login credentials are handled), and resources.
 
 | Piece | What it actually is | What it's for |
 |---|---|---|
-| **Front door** | A web server (nginx) | The single entry point. Every request from a browser passes through here first, which then sends it to the right place inside. |
-| **The website** | A React app | What your team actually sees and clicks on — the screens for leads, opportunities, events, submissions, and contacts. |
-| **The brain** | A Node.js API | Does all the actual work behind the scenes — saving records, checking permissions, running searches. |
-| **The filing cabinet** | A PostgreSQL database | Where every record permanently lives — leads, contacts, events, everything. |
-| **The notepad** | A Redis cache | Keeps track of who's currently logged in, so the system can log someone out instantly if needed. |
-| **The ID checker** | A Keycloak identity server | Handles logins. It's what lets you plug in your company's existing sign-in system (Okta, Microsoft, Google, or its own built-in one) instead of building a new password system from scratch. |
+| **Traffic** | A web server (nginx) | The single entry point. Every request from a browser passes through here first, which then sends it to the right place inside. |
+| **The website** | A React app | What your team actually sees and clicks on: the screens for leads, opportunities, events, submissions, and contacts. |
+| **The brain** | A Node.js API | Does all the actual work behind the scenes saving records, checking permissions, running searches. |
+| **The filing cabinet** | A PostgreSQL database | Where every record permanently lives leads, contacts, events, everything. As users internally grow, Postgres comes with an identity filtering and row level security capability. All data can be handled via SQL.|
+| **Caching and Logs* | A Redis cache | Keeps track of who's currently logged in, so the system can log someone out instantly if needed. |
+| **The ID checker** | A Keycloak identity server | Handles logins. It's what lets you plug in your company's existing sign-in system (Okta, Microsoft, Google, or its own built-in one) instead of building a new password system from scratch. Your developer or IT persona will need to review the Keycloak source files and do a configuration to your company setup.|
 
 None of these run on a specific cloud provider — they're portable containers, so they can run on a laptop, an office server, or any cloud host you choose.
 
