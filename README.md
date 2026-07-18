@@ -1,3 +1,20 @@
+# Company CRM Template
+This was designed as a use-case showing the ability to utilize NodeSpec for a relatively small complexity build of a company internal CRM. This was built in the span of a few hours with requirements ("REQs" in certain sections of our readme and app), Architecture, tasks.md files and source code/configuration/schema.
+
+Included:
+The purpose of the design was a build that includes modular functionality that a user with developer tools or just plain Claude Desktop, Cursor, Codex, etc could iterate without having to change any of the supporting infrastructure or even major backend services. Any feature/frontend changes would effect the react application, api, and database tables and columns.
+Also included is an initial MVP for use on a google sheet backend. Note: Google sheets is not highly performant for a tool with this type of read/write logic in an App Script extension and has a noticeable lag upon record changes.
+
+#Google Sheet Version
+- Navigate to the repository's /appscript folder. 
+- Create a blank google sheet
+- Go to Extensions -> App script
+- Copy/paste the Code.gs file and the Index.html (case sensitive) in the left Add Files "+" pane. Two total files.
+- Deploy -> Web App -> Copy Url/click -> Run
+
+Handoff changes: If you change google sheet script separately from the core deployable app version detailed below, you will have to rectify the drift/difference as two different products/apps.
+
+#Main CRM App
 # Setting up your CRM For Non-Developers
 
 This guide explains, in everyday language, what needs to happen to get your CRM running. It's written for someone who isn't a developer. Wherever a step needs technical hands, that's called out clearly so you know when to loop in someone who is good enough with AI tools, an actual developer, or an IT professional. This app was purpose built for a workflow where you can use almost any of the frontier AI models, or a decent local model, to write code, with a human checking frontend feature execution. This whole app was built and troubleshot over about 4 total hours and still requires company-specific workflows, changes, and placeholders to be removed. Changes like this are quick and simple with the use of your favorite model and very little to zero code writing on your own.
