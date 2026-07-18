@@ -1,75 +1,212 @@
-# Setting up your CRM — a plain-English guide
+# Setting up your CRM For Non-Developers
 
-This guide explains, in everyday language, what needs to happen to get your CRM running. It's written for someone who isn't a developer. Wherever a step needs technical hands, that's called out clearly so you know when to loop in your developer or IT person.
+This guide explains, in everyday language, what needs to happen to get your CRM running. It is written for someone who isn't a developer. Wherever a step needs technical hands, that is called out clearly so you know when to loop in someone who is good with AI tools, an actual developer, or an IT professional. This app was purpose built for the use case and structure where you can almost completely use any of the frontier models or a decent local model to write code, with a human checking frontend feature execution. This whole app was built and troubleshooted over the course of about 4 total hours and still requires company-specific workflows, changes, and placeholders to be removed. All combined, this was architected so that changes like this are quick and simple with the use of your favorite model and very little to zero code writing on your own.
 
-> **Important:** As of this writing, the CRM's architecture has been designed but no code has been written yet. This guide covers the pieces you (or whoever manages your servers) need to have ready *before* the developers install the actual application. Think of it as preparing the building lots before construction starts.
+Overall: This was a build vs. buy decision. The Company has to decide if purchasing an enterprise license from a major CRM provider, or any other major operations function for that matter, is worth the time savings and setup. These providers come with their own support personnel to either deploy locally or log you into their managed systems. Sometimes it is better to buy. As a comparison, the app you see is a total of 4 work hours to build with human code checks only in the backend and deployment. The frontend and database were easily configurable with a low level AI model.
 
-## The five pieces, in plain terms
+A fully usable, past-MVP CRM would take very little time to implement based on this architecture.
 
-Your CRM isn't one single program — it's five smaller pieces working together, all packaged in containers (think of a container like a sealed, self-contained box that runs the same way on any computer). Here's what each one does:
+Included in this repository are two apps:
 
-| Piece | What it actually is | What it's for |
+- A fully containerized and hostable CRM using a tool called Docker, run either on your personal machine or on a cloud server. To be collaborative, the best answer is a cloud server so multiple users can access it. This guide covers both.
+- A Google Sheets backed demo variant (see `apps-script-demo/README.md`).
+
+## The six pieces of the deployable app
+
+To build or deploy anything locally rather than buying a managed service, especially as a company's internal processes grow, the frontend functionality becomes secondary to backend and infrastructure. This includes networking (traffic in and out), identity (how login credentials are handled), and resources.
+
+| Piece | What it actually is | What it is for |
 |---|---|---|
-| **Front door** | A web server (nginx) | The single entry point. Every request from a browser passes through here first, which then sends it to the right place inside. |
-| **The website** | A React app | What your team actually sees and clicks on — the screens for leads, opportunities, events, submissions, and contacts. |
-| **The brain** | A Node.js API | Does all the actual work behind the scenes — saving records, checking permissions, running searches. |
-| **The filing cabinet** | A PostgreSQL database | Where every record permanently lives — leads, contacts, events, everything. |
-| **The notepad** | A Redis cache | Keeps track of who's currently logged in, so the system can log someone out instantly if needed. |
-| **The ID checker** | A Keycloak identity server | Handles logins. It's what lets you plug in your company's existing sign-in system (Okta, Microsoft, Google, or its own built-in one) instead of building a new password system from scratch. |
+| **Traffic** | A web server (nginx) | The single entry point. Every request from a browser passes through here first, and it sends each request to the right place inside. |
+| **The website** | A React app | What your team actually sees and clicks on: the screens for leads, opportunities, events, submissions, and contacts. |
+| **The brain** | A Node.js API | Does the actual work behind the scenes: saving records, checking permissions, running searches. |
+| **The filing cabinet** | A PostgreSQL database | Where every record permanently lives: leads, contacts, events, everything. As internal users grow, Postgres comes with identity filtering and row level security. All data can be handled via SQL. |
+| **Caching and logins** | A Redis cache | Keeps track of who is currently logged in, so the system can log someone out instantly if needed. |
+| **The ID checker** | A Keycloak identity server | Handles logins. It lets you plug in your company's existing sign-in system (Okta, Microsoft, Google, or its own built-in one) instead of building a new password system from scratch. Your developer or IT person will need to review the Keycloak files in `infra/keycloak/` to connect it to your company's setup. |
 
-None of these run on a specific cloud provider — they're portable containers, so they can run on a laptop, an office server, or any cloud host you choose.
+None of these are tied to a specific cloud provider. They are portable containers that can run on a laptop, an office server, or any cloud host you choose. When you start the app, all six pieces start together with one command.
 
-## Before you start: what you'll need
+You do not install these six pieces one at a time. Docker reads the recipe file in this repository (`docker-compose.yml`) and builds and starts all of them for you.
 
-A few things need to be provisioned (set up and made available) before the CRM can be installed. These are infrastructure tasks — the kind of thing a developer, IT admin, or hosting provider handles. None of them involve writing code; they're closer to "installing the plumbing" than "building the house."
+## Two ways to run it
 
-### 1. A place to store data (the filing cabinet)
+- **Path A: your own computer.** Good for a test drive. Only you can use it.
+- **Path B: a cloud server on AWS.** The whole team can use it from a shared web address. This is the full step-by-step below.
 
-- **What to do:** Get a PostgreSQL database running. For a quick local test, this is a single command; for real use, most teams use a managed database service (examples: Supabase, Amazon RDS, Google Cloud SQL, Neon) so it's backed up automatically.
-- **What you'll be given back:** A connection address (it looks like `postgresql://user:password@host:5432/dbname`) — save this somewhere safe, the CRM's brain needs it to connect.
-- **Who does this:** IT admin or hosting provider.
+---
 
-### 2. A place to remember who's logged in (the notepad)
+## Path A: Run it on your own computer
 
-- **What to do:** Get a Redis instance running — again, either locally for testing or through a managed provider (Redis Cloud, AWS ElastiCache, Upstash).
-- **What you'll be given back:** A connection address like `redis://localhost:6379`.
-- **Who does this:** IT admin or hosting provider.
+1. Install **Docker Desktop** from <https://www.docker.com/products/docker-desktop/> (Mac or Windows). Open it once so it is running (whale icon in your menu bar or system tray).
+2. Get this repository onto your computer. If someone sent you a zip, unzip it. If you use GitHub, click the green **Code** button and choose **Download ZIP**.
+3. Open a terminal (Mac: Terminal app; Windows: PowerShell) and go into the folder. For example: `cd Downloads/CRM-Application`
+4. Copy the settings file: `cp .env.example .env` (Windows PowerShell: `copy .env.example .env`). The defaults work for local testing.
+5. Start everything: `docker compose up -d --build`. The first run takes 5 to 10 minutes while it downloads and builds.
+6. Open <http://localhost> in your browser. Click **Log in** and use the demo account: username `admin`, password `admin`.
 
-### 3. A login system (the ID checker)
+To stop it later: `docker compose down`. Your data is kept and comes back the next time you start it.
 
-This is the step with the most manual clicking, because it involves setting preferences in an admin dashboard rather than just running a command.
+---
 
-- **Deploy the Keycloak server itself** (requires a Java 17+ environment if self-hosting).
-- **Create a "realm" and a "client"** inside Keycloak's admin console — think of a realm as your company's private space, and a client as the registration for the CRM app itself. This tells Keycloak "yes, this app is allowed to ask me who's logging in."
-- **Note down three values** the developers will need: the Keycloak web address, the realm name, and the client ID.
-- *(Optional, can be done later)* Set up specific user roles/permissions inside Keycloak if you want group-based access (e.g., "everyone in the Sales group is automatically a Member").
-- **Who does this:** IT admin, ideally with the developer present the first time, since redirect URLs need to match exactly what the app expects.
+## Path B: Step-by-step on AWS
 
-### 4. The front door (reverse proxy)
+This walks you from logging into AWS to a working CRM your team can reach in a browser. Budget 45 to 60 minutes the first time. Expect roughly 35 to 70 US dollars per month depending on the server size you pick (exact prices vary by region; AWS shows them during setup).
 
-- **Install nginx** on whatever server will host the CRM.
-- **Point it at the right places** — this is a configuration step where nginx is told "send website traffic here, send login traffic there, send API traffic over there." Your developer will typically hand you (or write directly) this configuration file.
-- *(Optional but strongly recommended for anything beyond internal testing)* **Get a TLS certificate** so the site loads securely over `https://`. The easiest free option is Certbot / Let's Encrypt — it can often set this up automatically.
-- **Who does this:** IT admin or developer.
+You will do six things:
 
-### What you will *not* need to manually set up
+1. Log into AWS and create a server.
+2. Give the server a permanent address.
+3. Open the server's terminal in your browser and install Docker.
+4. Put the app on the server and fill in its settings.
+5. Start the containers.
+6. Tell Keycloak (the login system) about your new address, then log in.
 
-The website (React app) and the brain (Node.js API) don't require any provisioning — they're pure application code that gets built and packaged into containers once development starts. There's nothing to "install" for these ahead of time.
+### Step 1: Log into AWS and create a server
 
-## Suggested order of operations
+1. Go to <https://console.aws.amazon.com> and sign in. If your company has no AWS account yet, click **Create a new AWS account** and follow the prompts (you will need a credit card).
+2. In the top right corner, check the **region** (for example "N. Virginia us-east-1"). Pick the one closest to your team and remember it. Everything you create lives in that region, and if you later "lose" your server, the most common reason is looking in the wrong region.
+3. In the search bar at the top, type **EC2** and click the EC2 result. EC2 is AWS's name for rentable servers.
+4. Click the orange **Launch instance** button.
+5. Fill in the form from top to bottom:
+   - **Name:** `crm-server`
+   - **Application and OS Images:** click **Ubuntu**, and in the dropdown pick **Ubuntu Server 24.04 LTS**.
+   - **Instance type:** pick **t3.large** (comfortable, about 60 USD/month). **t3.medium** (about 30 USD/month) also works but is slower on the first build.
+   - **Key pair:** choose **Proceed without a key pair**. You will use AWS's browser terminal instead, so you do not need to manage key files.
+   - **Network settings:** tick all three checkboxes: **Allow SSH traffic from** (leave "Anywhere" for now), **Allow HTTPS traffic from the internet**, and **Allow HTTP traffic from the internet**.
+   - **Configure storage:** change the size to **30** GiB.
+6. Click **Launch instance**, then click the instance id link (starts with `i-`) to watch it. Wait until **Instance state** says **Running** (about a minute).
 
-1. Set up the database and the notepad (Redis) first — nothing else can start without them.
-2. Set up Keycloak and create the realm/client, and hand the connection details to your developer.
-3. Once the developers have built and packaged the website and the API as containers, set up the front door (nginx) to tie everything together.
-4. Get a TLS certificate if this is going live for real users.
+### Step 2: Give the server a permanent address
 
-## After setup
+By default the server's web address changes every time it is stopped and started. Fix that now so you only configure the app once.
 
-Once all of the above is in place and the developers have built the application containers, running the whole system should come down to a single command (`docker compose up`) that starts everything together, using the connection details you gathered above.
+1. In the EC2 left menu, under **Network & Security**, click **Elastic IPs**.
+2. Click **Allocate Elastic IP address**, then **Allocate**.
+3. Select the new address, click **Actions**, then **Associate Elastic IP address**.
+4. Under **Instance**, pick `crm-server`, then click **Associate**.
+5. Write down the address (four numbers with dots, for example `3.92.14.203`). In the rest of this guide, wherever you see `YOUR-SERVER-IP`, type this address instead.
+
+### Step 3: Open the server's terminal and install Docker
+
+1. In the EC2 left menu click **Instances**, tick the box next to `crm-server`, and click **Connect** (top of the page).
+2. Stay on the **EC2 Instance Connect** tab and click the orange **Connect** button. A black terminal window opens in your browser. This is the server. You type commands at the green prompt and press Enter.
+3. Copy and paste the following, then press Enter. It installs Docker (paste tip: right-click inside the terminal, or use Ctrl+Shift+V):
+
+   ```bash
+   sudo apt-get update && curl -fsSL https://get.docker.com | sudo sh && sudo usermod -aG docker ubuntu
+   ```
+
+   This takes a minute or two and prints a lot of text. That is normal.
+4. Close the terminal tab, then repeat steps 1 and 2 to open a fresh one. This makes the permission change take effect.
+5. Check it worked by typing `docker --version` and pressing Enter. You should see a version number, not an error.
+
+### Step 4: Put the app on the server and fill in its settings
+
+1. In the terminal, download the app. If the repository is private, ask whoever manages it for the exact command to paste; it will look like this:
+
+   ```bash
+   git clone https://github.com/NodeSpec/CRM-Application.git
+   cd CRM-Application
+   ```
+
+2. Create the settings file from the template:
+
+   ```bash
+   cp .env.example .env
+   nano .env
+   ```
+
+   `nano` is a small text editor that opens right in the terminal. Move with the arrow keys.
+3. Change these lines. Everything else can stay as is for now.
+   - `POSTGRES_PASSWORD=change-me-postgres` : replace `change-me-postgres` with a password you invent. **Important:** the same text also appears a few lines down inside `DATABASE_URL`. Change it in both places so they match.
+   - `REDIS_PASSWORD=change-me-redis` : same idea, and the same text also appears inside `REDIS_URL`. Change both.
+   - `SESSION_SECRET=...` : replace with a long random sentence, at least 32 characters.
+   - `APP_BASE_URL=http://localhost` : change to `http://YOUR-SERVER-IP`
+   - `OIDC_ISSUER_URL=http://localhost/auth/realms/crm` : change only the `localhost` part, so it reads `http://YOUR-SERVER-IP/auth/realms/crm`
+   - `KEYCLOAK_ADMIN_PASSWORD=change-me-keycloak-admin` : replace with a strong password you invent. This is the master key to the login system. Save it in your password manager.
+4. Save and exit: press **Ctrl+O**, then **Enter**, then **Ctrl+X**.
+
+### Step 5: Start the containers
+
+1. Type this and press Enter:
+
+   ```bash
+   docker compose up -d --build
+   ```
+
+   The first run takes 5 to 10 minutes. It downloads and builds all six pieces.
+2. When the prompt comes back, check the status:
+
+   ```bash
+   docker compose ps
+   ```
+
+   You should see six services with **Up** or **Up (healthy)** in the STATUS column: `reverse-proxy`, `web`, `api`, `idp` (that is Keycloak), `db`, and `session-store`. If one says Restarting, wait a minute and run the command again; Keycloak in particular is slow to start.
+
+### Step 6: Tell Keycloak about your address, then log in
+
+The login system ships configured for `localhost` (running on your own machine). One-time fix: tell it your server's real address, or it will refuse logins with an "invalid redirect" message.
+
+1. In your browser, go to `http://YOUR-SERVER-IP/auth`
+2. Click **Administration Console** and sign in with username `admin` and the `KEYCLOAK_ADMIN_PASSWORD` you set in Step 4.
+3. In the top left there is a dropdown that says **master**. Click it and switch to **crm**. (Keycloak keeps its own admin space, called master, separate from your CRM's space, called crm.)
+4. In the left menu click **Clients**, then click **crm-web** in the list:
+   - Find **Valid redirect URIs**, click **Add valid redirect URIs**, and type `http://YOUR-SERVER-IP/*`
+   - Find **Web origins**, click add, and type `http://YOUR-SERVER-IP`
+   - Scroll down and click **Save**.
+5. Go back to **Clients** and click **crm-api**:
+   - **Valid redirect URIs:** add `http://YOUR-SERVER-IP/api/v1/auth/callback`
+   - **Web origins:** add `http://YOUR-SERVER-IP`
+   - Click **Save**.
+6. Now open `http://YOUR-SERVER-IP` in your browser. You should see the CRM. Click **Log in** and use the demo account: username `admin`, password `admin`. You should land on the dashboard with sample data.
+
+### Step 7: Change the demo passwords and add your team
+
+Do this right away. The demo passwords are public knowledge (they are printed in this file).
+
+1. Go to `http://YOUR-SERVER-IP/auth`, open the **Administration Console**, sign in, and switch **master** to **crm** (same as before).
+2. Click **Users** in the left menu. You will see `admin` and `member`.
+3. Click **admin**, open the **Credentials** tab, click **Reset password**, type a new password, switch **Temporary** to **Off**, and save. Repeat for `member` (or delete that user if you do not want it).
+4. To add a coworker: on the Users page click **Add user**, fill in a username and their email, and click **Create**. Then:
+   - **Credentials** tab: **Set password**, switch **Temporary** to **On** so they are asked to change it on first login.
+   - **Groups** tab: click **Join Group** and pick **Admins** (full access, sees the Admin menu) or **Members** (regular access).
+5. That person can now sign in at `http://YOUR-SERVER-IP`.
+
+### Everyday operations
+
+Open the server terminal the same way as in Step 3 (EC2, tick `crm-server`, Connect), then `cd CRM-Application` first.
+
+| You want to | Type this |
+|---|---|
+| Check everything is running | `docker compose ps` |
+| Restart the app | `docker compose restart` |
+| See recent activity or errors | `docker compose logs --tail 100 api` |
+| Stop the app (data is kept) | `docker compose down` |
+| Start it again | `docker compose up -d` |
+| Install an update your developer pushed | `git pull` then `docker compose up -d --build` |
+
+To pause the monthly server bill (for example, over a holiday): in the EC2 console tick `crm-server`, click **Instance state**, then **Stop instance**. Start it again the same way later. Your Elastic IP address and all data are kept. A stopped server still bills a few dollars a month for the disk and the reserved address.
+
+### If something looks wrong
+
+- **The page will not load at all:** open the terminal and run `docker compose ps`. If services are missing or restarting, run `docker compose restart`, wait two minutes, and try again.
+- **Login fails with an "invalid redirect" message:** redo Step 6. The address in Keycloak has to match the address in the browser exactly.
+- **Forgot the Keycloak admin password:** it is the `KEYCLOAK_ADMIN_PASSWORD` line in your `.env` file. View it with `grep KEYCLOAK .env` in the terminal.
+- **Anything else:** run `docker compose logs --tail 200 api` and send the output to your developer, or paste it into your AI assistant and ask what is wrong.
+
+### When to bring in a developer or IT person
+
+The setup above is fine for an internal tool used over a plain `http://` address. Before you put real customer data in it or open it to the wider internet, have a technical person handle these, in roughly a day:
+
+1. A real web address (`crm.yourcompany.com`) instead of the bare IP, plus an HTTPS certificate so the address bar shows the lock. After that, set `COOKIE_SECURE=true` in `.env`.
+2. Connecting Keycloak to your company logins (Okta, Microsoft 365, Google Workspace) so nobody manages a separate CRM password.
+3. Moving the database to a managed service with automatic backups (for example Amazon RDS), or at minimum scheduling disk snapshots in EC2.
+4. Tightening the firewall so SSH access is limited instead of open to anywhere.
+5. Company-specific workflows and removing the sample data and placeholders.
 
 ## Questions or stuck partway through?
 
-Any step above that mentions an admin console, a certificate, or "your developer" is a good moment to loop in whoever manages your technical infrastructure — these aren't steps an AI assistant can complete on your behalf, since they involve decisions specific to your organization (domain names, company logins, security certificates, etc).
+Any step above that mentions certificates, company logins, or firewalls is a good moment to loop in whoever manages your technical infrastructure. Those involve decisions specific to your organization. For everything else in this guide, the exact button names and commands are written out so you can do it yourself, and pasting an error message into your AI assistant will usually get you unstuck.
 
 ---
 
@@ -87,7 +224,7 @@ Any step above that mentions an admin console, a certificate, or "your developer
 > (with detail views), a Deal Pipeline **Kanban** with revenue rollups, **B2G
 > Federal Capture** (MEDDIC, teaming, stakeholders, compliance gates, capture
 > stepper), Activities & Tasks, admin-defined **custom fields** per module, and
-> a **responsive/mobile** layout. No fabricated metrics — revenue is computed
+> a **responsive/mobile** layout. No fabricated metrics: revenue is computed
 > from real deal amounts; MRR is intentionally omitted.
 
 ## Run the whole stack
@@ -105,7 +242,7 @@ populated on first run).
 
 ## Log in and try it
 
-Click **Log in** — you'll be redirected to Keycloak. Two demo users are seeded
+Click **Log in**, you'll be redirected to Keycloak. Two demo users are seeded
 by the realm import:
 
 | User | Username | Password | Role |
@@ -115,7 +252,7 @@ by the realm import:
 
 After logging in you land on the **Dashboard** (live cross-module counts). Open
 any module (e.g. **B2B Leads**) to see seeded records, and use the **Add new**
-form to create one and watch it appear. These are development credentials —
+form to create one and watch it appear. These are development credentials , 
 change them (and the `crm-api` client secret in the realm export) before any
 real deployment.
 
@@ -136,9 +273,9 @@ docker-compose.yml       # single-host deployment topology (all six services)
 .env.example             # every supported variable, documented
 db/migrations/           # numbered up/down SQL, applied by the API on startup
 db/init/                 # first-boot Postgres init (Keycloak database)
-services/api/            # CRM API — Node/Express/TypeScript
-services/web/            # CRM Web App — React/Vite/TypeScript
-services/proxy/          # Reverse proxy — nginx.conf + Dockerfile
+services/api/            # CRM API, Node/Express/TypeScript
+services/web/            # CRM Web App, React/Vite/TypeScript
+services/proxy/          # Reverse proxy, nginx.conf + Dockerfile
 infra/redis/redis.conf   # Session store config
 infra/keycloak/          # Keycloak realm export (realm, clients, roles)
 ```
@@ -146,26 +283,26 @@ infra/keycloak/          # Keycloak realm export (realm, clients, roles)
 ## Configuration
 
 Everything environment-specific is injected via `.env` (or mounted config
-files) — no secrets are baked into images. The API validates required
+files). No secrets are baked into images. The API validates required
 variables at startup and **fails fast** with a descriptive error if any are
 missing. See `.env.example` for the full list.
 
 ## Outbound internet & egress configuration (REQ-026)
 
 Inbound traffic (browser → app) enters through the nginx reverse proxy. This
-section is about the **other direction** — letting the API reach the internet so
+section is about the **other direction**, letting the API reach the internet so
 integrations like the Company 360 social feed (LinkedIn / X / Instagram /
 TikTok) can call third-party APIs. In a hardened cloud network, containers have
 **no route to the internet by default**, so this is a deliberate step.
 
 **Two layers to configure:**
 
-1. **Network route** — the host/subnet must be able to reach the internet
-   (NAT gateway, internet gateway, or Cloud NAT — see per-environment notes).
-2. **Application egress** — per REQ-026 the app never calls third-party hosts
+1. **Network route**, the host/subnet must be able to reach the internet
+   (NAT gateway, internet gateway, or Cloud NAT, see per-environment notes).
+2. **Application egress**, per REQ-026 the app never calls third-party hosts
    directly. Point it at your egress gateway and supply per-provider credentials
    (all optional; unset means the feature stays inert and reports "not
-   connected" — it never fabricates data):
+   connected", it never fabricates data):
 
    ```bash
    # in .env (see .env.example)
@@ -183,7 +320,7 @@ TikTok) can call third-party APIs. In a hardened cloud network, containers have
 ### Desktop / single host (Docker Compose on a laptop or office server)
 
 - Docker's default bridge network already NATs outbound traffic through the
-  host, so containers reach the internet with **no extra setup** — provided the
+  host, so containers reach the internet with **no extra setup**, provided the
   host itself has internet access.
 - **Behind a corporate proxy?** Add the standard proxy variables to the `api`
   service environment (and the Docker daemon) so outbound calls traverse it:
@@ -193,7 +330,7 @@ TikTok) can call third-party APIs. In a hardened cloud network, containers have
   NO_PROXY=localhost,127.0.0.1,db,redis,keycloak,proxy
   ```
   Keep internal service names in `NO_PROXY` so intra-stack traffic stays local.
-- If you don't run an egress gateway, leave `SOCIAL_EGRESS_BASE_URL` empty — the
+- If you don't run an egress gateway, leave `SOCIAL_EGRESS_BASE_URL` empty, the
   social feed shows the honest "connect a platform API" state and makes no
   outbound calls.
 
